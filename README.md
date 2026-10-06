@@ -1,6 +1,17 @@
 # Codex Time
 
-Codex Time measures local Codex session work automatically, including thinking and quiet tools. For developers who use multiple models, it connects working-time usage to the model and reasoning level recorded for each turn, and estimates allowance burn from recorded quota readings. A separate user service records time while a searchable terminal picker lets you inspect reports and resume sessions. The project demonstrates read-only integration, recoverable accounting and privacy-conscious persistence; install it once and keep the resulting JSON in a separate data repository if desired.
+**Know where your Codex hours—and allowance—go.**
+
+Codex Time is a local time tracker for developers running Codex across projects, models and reasoning levels. It turns session history into a clear picture of how long Codex worked, which models handled that work, and how quickly recorded allowance was consumed—so you can compare workloads with evidence instead of guesswork.
+
+Tracking runs automatically in a separate user service, including quiet thinking and tool execution while subtracting detected blocking waits. A searchable terminal picker lets you find and resume sessions. Built around read-only integration, recoverable accounting and content-free timing data, the project shows how to make internal runtime evidence useful without saving conversation bodies.
+
+## At a glance
+
+- **Find your work:** search sessions across projects and resume one with Enter.
+- **See where time went:** report working time by date, directory, session, model and reasoning level.
+- **Watch your allowance:** see the latest recorded balance and observed percentage points consumed per working hour, with missing evidence made visible.
+- **Keep your data:** inspect versioned JSON locally or store it in a separate Git repository.
 
 ## Tech stack and why chosen
 
@@ -14,6 +25,49 @@ codex-time report --all-dirs working time by date, directory and session
 codex-time models week      ranked working-time usage by model and reasoning
 codex-time burn week        observed allowance points per working hour
 ```
+
+## From “where did my allowance go?” to a readable answer
+
+Ask for today's tracked workload and the latest recorded weekly allowance balance:
+
+```bash
+codex-time burn day --date 2026-10-06 --plain
+```
+
+Actual local output captured October 6, 2026 (`--plain` keeps it color-free and easy to copy):
+
+```text
+Codex allowance
+Tue, Oct 6, 2026  |  America/Toronto
+Weekly allowance
+
+58% remaining   42% used
+###################-------------
+Observed Oct 6, 2:08 PM EDT
+
+0.85 pts / working hour
+5 pts matched  |  5h 51m working
+
+Model work
+Model        Reasoning   Working        Share of work
+gpt-6.1-sol  high         3h 07m   #####-----   53.4%
+gpt-6.1-sol  xhigh        1h 29m   ###-------   25.5%
+gpt-6-astra  high            34m   #---------    9.7%
+gpt-6.1-sol  medium          24m   #---------    7.0%
+gpt-6-astra  xhigh           11m   ----------    3.3%
+gpt-6-astra  max              4m   ----------    1.1%
+
+18 pts excluded across day boundaries.
+Rough estimate | low confidence
+Rounded readings can outweigh this rate.
+Some working time is estimated.
+
+pts = allowance percentage points; concurrent working hours add.
+Model shares describe work, including tools and delegation.
+More evidence: --details
+```
+
+Here, Sol at high and xhigh accounts for **78.9% of matched working time**. The **0.85 points/hour** rate comes from 5 matched allowance points over 5h 51m of summed root-session work; 18 points across day boundaries are shown separately. Model shares describe the workload, not each model's quota cost, and the rate is a rough observation rather than an hours-remaining forecast.
 
 ## Install
 
