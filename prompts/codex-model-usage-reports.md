@@ -1,0 +1,23 @@
+# Codex model-usage report handoff
+
+Use this prompt to continue or review model working-time usage in Codex Time. Read the plans and source, verify attribution with sanitized fixtures, then check the installed command and service while preserving existing Codex and timetrace data.
+
+```text
+Work in the track-codex-sessions checkout. Read applicable AGENTS.md guidance, README.md, plans/codex-session-time-tracker.md, plans/codex-model-usage-reports.md and docs/smoke-tests.md. Preserve existing work; capture git status before changing a Git repository. Do not use worktrees, automatically commit/push, mutate Codex threads or access existing ~/.timetrace records.
+
+Maintain the atomic ExecPlan in plans/codex-model-usage-reports.md. Attribute existing counted root working intervals to exact rollout turn_context.model + turn_context.effort using stable session/turn IDs. The first declared context applies from turn start; later timestamped changes split time. Deduplicate identical timestamped evidence and collapse repeated settings in the attribution timeline; keep missing/conflicting evidence Unknown with content-free diagnostics. Never infer historical models from current SQLite settings. Model storage contains only IDs, reasoning levels, timestamps and provenance, with no prompts, answers, tool output or credentials.
+
+Preserve timing/wait evidence when upgrading v1 ledgers to v2, invalidate old ingestion offsets once and backfill available history. Missing sources must retain counted work as Unknown. Subsequent scans remain incremental and restart/reimport/archive/rename/resume preserve identity.
+
+Keep original counted work, including thinking/tools and excluding detected human waits. Partition disjoint intervals using latest-starting-turn ownership, model contexts and calendar boundaries. Model buckets including Unknown must sum to existing root totals under identical filters using exact integer working_microseconds/total_microseconds; aggregate integer counters before converting compatible seconds fields; concurrent roots count separately and children add zero. Preserve quality and observation uncertainty.
+
+Expose codex-time models day|week|month. Default to the current America/Toronto calendar period across all directories/archive states. Monday weeks; calendar months. Respect global --timezone. Support --date YYYY-MM-DD, per-interval --cwd PATH, --archive active|archived|all (default all), --model-only, mutually exclusive --json/--csv and default terminal table. Rank known model/reasoning rows by descending working-time usage with deterministic ties. Show exact IDs, reasoning, duration, percentage, distinct session count and quality. Unknown model time is separately unranked and included in totals/denominator. Show latest observed model/reasoning in the picker and attributed model details; long names/paths must not obscure timers. Do not add efficiency, price, token-throughput or quality rankings.
+
+Write defining tests first and observe expected RED before implementation changes. Cover mixed models/reasoning, within-turn switches, repeated/conflicting/missing contexts, blocking waits, overlap ownership, concurrent roots, child exclusion, legacy loading/backfill, missing sources and restart. Verify day/week/month/year boundaries and Toronto DST; assert conservation, JSON/CSV parity and history idempotence. Include the holdout switch during an overlapping wait.
+
+Automated verification: uv run pytest; uv run mypy src; uv run ruff check .; uv build; ./scripts/smoke-test.sh. The smoke script includes tests/test_model_usage.py and tests/test_model_ingest.py. Native-reader tests use only disposable HOME/config/store. Installation verification, no sudo: ./scripts/setup.sh, then after history scan completes ./scripts/check.sh and codex-time status --json; verify installed codex-time models day. Finish pending base-app verification recorded in its plan.
+
+Manual verification: follow docs/smoke-tests.md Action/Expected entries for picker timers/model details, normal-session switches, blocking waits, concurrent roots/children, period boundaries, per-cwd model/report total conservation, model-only grouping, JSON/CSV parity, import idempotence and service restart. Report which checks actually ran and remaining attribution/accuracy limits.
+
+Update README.md, docs/smoke-tests.md, scripts/smoke-test.sh and matching plan with implementation. Review the simplest robust change and rollback (uninstall preserves data). If a commit is later explicitly authorized, include related implementation/docs/plans together, inspect staged diff and use: feat: report Codex working time by model.
+```

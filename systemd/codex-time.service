@@ -1,0 +1,12 @@
+[Unit]
+Description=Read-only Codex session working-time tracker
+
+[Service]
+Type=simple
+ExecStart=@EXEC_START@
+Restart=on-failure
+RestartSec=3
+UMask=0077
+
+[Install]
+WantedBy=default.target
