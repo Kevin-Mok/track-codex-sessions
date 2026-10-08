@@ -21,6 +21,7 @@ See [smoke tests](docs/smoke-tests.md), the [implementation record](plans/codex-
 
 ```text
 codex-time                  searchable sessions → Enter to resume
+codex-time day              today → repo totals → session durations
 codex-time report --all-dirs working time by date, directory and session
 codex-time models week      ranked working-time usage by model and reasoning
 codex-time burn week        observed allowance points per working hour
@@ -120,6 +121,25 @@ codex-time status --json
 ```
 
 Global options precede the subcommand: `--codex-home`, `--data-dir`, `--state-dir`, `--socket`, and `--timezone`. No subcommand opens the UI. The `list` and `report` commands select the current directory and unarchived sessions by default; directory reports count only intervals attributed to that directory, including a session that has since resumed elsewhere. Date endpoints are inclusive. `--timezone` changes display/report dates; native record directories always use America/Toronto.
+
+### Daily repo and session time
+
+See the day's total working time, then each repo/directory with its share of the day and the sessions that contributed. Directories and sessions rank by working duration, so the largest blocks appear first.
+
+```bash
+codex-time day
+codex-time day --date 2026-10-06
+codex-time day --date 2026-10-06 --cwd /absolute/project
+codex-time day --session SESSION_ID --details
+codex-time day --plain
+codex-time day --json
+```
+
+From a source checkout, use `uv run codex-time day`; run `./scripts/setup.sh` to update the installed command. Today uses the selected `--timezone` (America/Toronto by default). Unlike `list` and `report`, `day` includes **all directories and archive states** by default; `--archive active|archived|all` narrows that scope. `--cwd` selects an exact recorded working directory, rather than inferring Git roots or combining subdirectories.
+
+Each directory shows its full path, total duration and percentage of the selected day's work. Its indented sessions show title, stable ID and duration **in that directory on that day**. A session resumed elsewhere can appear under both directories, with each portion counted once. Empty days say that no work was recorded. Long paths and titles wrap while time values remain visible in narrow terminals.
+
+The same wait-subtracted root-session accounting powers the existing reports: concurrent roots add, child agents add no separate time, and local midnight/DST determine the day's boundaries. These values measure recorded Codex work rather than exact human attention. `--details` exposes quality flags and diagnostics; `--plain` is ASCII and color-free. `--color auto|always|never`, `NO_COLOR` and piped output follow the allowance report's conventions. JSON carries exact `total_microseconds` at day, directory and session levels; their sums conserve the total. Whole-second durations round down for display; positive subsecond work remains visible, such as `0.25s`.
 
 ### Model working-time usage
 
@@ -236,4 +256,4 @@ The smoke script needs no sudo and changes only temporary fixtures. Native-reade
 ./scripts/uninstall.sh
 ```
 
-Uninstall stops/disables the user service, removes its unit and uv-installed app, and preserves recorded data and runtime state. A reinstall of this version can read the existing ledger. Older versions cannot read v3; rolling back to them requires their matching pre-upgrade ledger backup while the service is stopped. Stopping `codex-time.service` alone pauses observation without changing Codex. Keep matching plans and documentation with implementation changes.
+Uninstall has no configurable options; `--help` shows its summary. It stops/disables the user service, removes its unit and uv-installed app, and preserves recorded data and runtime state. A reinstall of this version can read the existing ledger. Older versions cannot read v3; rolling back to them requires their matching pre-upgrade ledger backup while the service is stopped. Stopping `codex-time.service` alone pauses observation without changing Codex. Keep matching plans and documentation with implementation changes.

@@ -13,10 +13,11 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 from codex_time.burn import burn_report
 from codex_time.burn_output import burn_csv, burn_table
 from codex_time.daemon import import_history, observations, run_daemon, runtime_status
+from codex_time.day_output import day_table
 from codex_time.model_output import model_csv, model_table
 from codex_time.model_usage import model_report
 from codex_time.presentation import build_rows, duration, run_ui
-from codex_time.reporting import report
+from codex_time.reporting import daily_report, report
 from codex_time.storage import Store, StoreError
 
 
@@ -51,6 +52,15 @@ def parser() -> argparse.ArgumentParser:
             command.add_argument("--session")
             command.add_argument("--from", dest="start", type=date.fromisoformat)
             command.add_argument("--to", dest="end", type=date.fromisoformat)
+    day = sub.add_parser("day", help="show daily directory totals and session durations")
+    day.add_argument("--date", type=date.fromisoformat, dest="selected_date")
+    day.add_argument("--cwd", help="count only intervals in this directory")
+    day.add_argument("--archive", choices=["active", "archived", "all"], default="all")
+    day.add_argument("--session", help="count only this stable session ID")
+    day.add_argument("--json", action="store_true")
+    day.add_argument("--details", action="store_true", help="show timing quality and diagnostics")
+    day.add_argument("--plain", action="store_true", help="ASCII output without color")
+    day.add_argument("--color", choices=["auto", "always", "never"], default="auto")
     models = sub.add_parser("models", help="rank model working-time usage")
     periods = models.add_subparsers(dest="period", required=True)
     for period in ("day", "week", "month"):
@@ -131,6 +141,32 @@ def main() -> int:
                 print(f"Quality: {', '.join(str(q) for q in data['quality'])}")
                 print(
                     json.dumps({k: data[k] for k in ("days", "directories", "sessions")}, indent=2)
+                )
+        elif args.command == "day":
+            daily_data = daily_report(
+                store.load(),
+                selected_date=args.selected_date,
+                cwd=args.cwd,
+                archive=args.archive,
+                session_id=args.session,
+                timezone_name=args.timezone,
+            )
+            if args.json:
+                print(json.dumps(daily_data, indent=2))
+            else:
+                use_color = args.color == "always" or (
+                    args.color == "auto"
+                    and sys.stdout.isatty()
+                    and os.environ.get("TERM") != "dumb"
+                )
+                print(
+                    day_table(
+                        daily_data,
+                        width=shutil.get_terminal_size((88, 24)).columns,
+                        color=use_color,
+                        details=args.details,
+                        plain=args.plain,
+                    )
                 )
         elif args.command == "burn":
             burn_data = burn_report(

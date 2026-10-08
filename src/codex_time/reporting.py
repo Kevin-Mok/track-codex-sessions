@@ -1,8 +1,9 @@
 """Directory-attributed reports from durable disjoint work segments."""
 
-from datetime import date
+from datetime import date, datetime
 from pathlib import Path
 from typing import TypedDict
+from zoneinfo import ZoneInfo
 
 from codex_time.accounting import daily_microseconds, segments
 from codex_time.models import Ledger, Session
@@ -82,4 +83,101 @@ def report(
         "sessions": {sid: micros / 1_000_000 for sid, micros in sorted(sessions.items())},
         "quality": sorted(quality),
         "diagnostics": ledger.diagnostics,
+    }
+
+
+class SessionTime(TypedDict):
+    id: str
+    title: str
+    total_seconds: float
+    total_microseconds: int
+    quality: list[str]
+
+
+class DirectoryTime(TypedDict):
+    cwd: str
+    total_seconds: float
+    total_microseconds: int
+    share_percent: float
+    sessions: list[SessionTime]
+    quality: list[str]
+
+
+class DailyReport(TypedDict):
+    date: str
+    timezone: str
+    total_seconds: float
+    total_microseconds: int
+    directories: list[DirectoryTime]
+    quality: list[str]
+    diagnostics: list[str]
+
+
+def daily_report(
+    ledger: Ledger,
+    *,
+    selected_date: date | None = None,
+    cwd: str | None = None,
+    archive: str = "all",
+    session_id: str | None = None,
+    timezone_name: str = "America/Toronto",
+) -> DailyReport:
+    """Project one local day's work into directory/session groups without writes."""
+    zone = ZoneInfo(timezone_name)
+    day = (selected_date or datetime.now(zone).date()).isoformat()
+    counted: dict[str, dict[str, SessionTime]] = {}
+    directory_filter = Path(cwd).resolve() if cwd is not None else None
+    for session in selected_sessions(
+        ledger,
+        cwd=cwd or "/",
+        all_directories=cwd is None,
+        archive=archive,
+        session_id=session_id,
+    ):
+        if session.is_child or session.parent_id:
+            continue
+        for span in segments(list(session.turns.values())):
+            if directory_filter is not None and Path(span.cwd).resolve() != directory_filter:
+                continue
+            micros = daily_microseconds([span], timezone_name).get(day, 0)
+            if not micros:
+                continue
+            rows = counted.setdefault(span.cwd, {})
+            if session.id not in rows:
+                rows[session.id] = {
+                    "id": session.id,
+                    "title": session.title,
+                    "total_seconds": 0,
+                    "total_microseconds": 0,
+                    "quality": list(session.quality),
+                }
+            row = rows[session.id]
+            row["total_microseconds"] += micros
+            row["quality"] = sorted(set(row["quality"]) | set(span.quality))
+    total = sum(row["total_microseconds"] for rows in counted.values() for row in rows.values())
+    directories: list[DirectoryTime] = []
+    for directory, rows in counted.items():
+        sessions = sorted(rows.values(), key=lambda row: (-row["total_microseconds"], row["id"]))
+        for row in sessions:
+            row["total_seconds"] = row["total_microseconds"] / 1_000_000
+        micros = sum(row["total_microseconds"] for row in sessions)
+        directories.append(
+            {
+                "cwd": directory,
+                "total_seconds": micros / 1_000_000,
+                "total_microseconds": micros,
+                "share_percent": micros * 100 / total,
+                "sessions": sessions,
+                "quality": sorted({q for row in sessions for q in row["quality"]}),
+            }
+        )
+    directories.sort(key=lambda row: (-row["total_microseconds"], row["cwd"]))
+    return {
+        "date": day,
+        "timezone": timezone_name,
+        "total_seconds": total / 1_000_000,
+        "total_microseconds": total,
+        "directories": directories,
+        "quality": sorted({q for directory in directories for q in directory["quality"]}),
+        "diagnostics": list(ledger.diagnostics),
     }

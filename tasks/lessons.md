@@ -14,3 +14,4 @@ Keep local tracker changes grounded in lifecycle and read-only runtime evidence.
 - `uv tool install --force` can reuse a local wheel when pyproject/version is unchanged. Use `--reinstall-package codex-time` for setup updates and verify the installed executable, not only source tests.
 
 - Verify operator-facing reports as rendered output at normal and narrow widths; passing accounting/export tests does not establish terminal readability.
+- When staging only this session's portion of a shared plan, trim section-separator blank lines at the staged EOF and validate the index diff; leave the full working-tree plan intact.

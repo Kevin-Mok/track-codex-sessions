@@ -1,6 +1,6 @@
 # Codex Time smoke tests
 
-Verify automatic work accounting, model working-time usage, allowance burn tracking, safe session resume and service recovery. First run the isolated smoke script, then inspect the installed service and perform the normal-session UI/report checks. All commands require no sudo; fixture checks never access existing timetrace records.
+Verify automatic work accounting, daily repo/session reports, model working-time usage, allowance burn tracking, safe session resume and service recovery. First run the isolated smoke script, then inspect the installed service and perform the normal-session UI/report checks. All commands require no sudo; fixture checks never access existing timetrace records.
 
 ## Automated fixture checks
 
@@ -61,6 +61,24 @@ Verify automatic work accounting, model working-time usage, allowance burn track
 **Action:** ./scripts/uninstall.sh
 
 **Expected:** Only the service and installed app are removed. Recorded data remains available for reinstall. Uninstall lifecycle was checked in an isolated HOME with controlled service/tool executables; routine verification leaves the real installed service enabled.
+
+## Daily repo and session time
+
+**Action:** uv run codex-time day --date 2026-10-06
+
+**Expected:** Human-readable date/timezone and a day total appear above directories ranked by duration, each with its full cwd, total and share. Sessions beneath each directory show title, stable ID and that day's duration in that directory. Archived sessions contribute by default, root concurrency adds, children add no separate time, and a session resumed elsewhere retains the original cwd for each portion. Use a date with recorded work; an empty day gives an explicit message.
+
+**Action:** uv run codex-time day --date 2026-10-06 --json
+
+**Expected:** Nested session total_microseconds sum to their directory total_microseconds; directory totals sum to the day total_microseconds. With matching date/timezone, that day total equals `report --all-dirs --archive all --from 2026-10-06 --to 2026-10-06 --json`. JSON seconds are derived once from integer counters. Reports leave ledger/native-record bytes untouched; the running observer may independently record new work.
+
+**Action:** uv run codex-time day --date 2026-10-06 --cwd /absolute/project --archive active --details
+
+**Expected:** Replace /absolute/project with a real project directory. Only original working intervals in that exact cwd contribute, even if a session later resumed elsewhere. Active means unarchived, independent of runtime state. Details show quality flags/diagnostics; `--session SESSION_ID` narrows to one stable identity. Global `--timezone` belongs before `day`; its timezone defines the calendar date, including 23/25-hour DST days.
+
+**Action:** COLUMNS=48 uv run codex-time day --date 2026-10-06 --plain
+
+**Expected:** Long paths/titles/IDs wrap, directory/session durations remain visible, and output is ASCII without ANSI color. `NO_COLOR=1` and piped automatic output also omit color; `--color always` enables color unless NO_COLOR/plain overrides it. Normal output shows helpful hierarchy and short accuracy notes; raw flags appear only with --details. After ./scripts/setup.sh, the installed `codex-time day` exposes the same view.
 
 ## Model working-time usage
 
