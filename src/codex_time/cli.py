@@ -69,6 +69,16 @@ def parser() -> argparse.ArgumentParser:
         command.add_argument("--cwd", help="count only intervals in this directory")
         command.add_argument("--archive", choices=["active", "archived", "all"], default="all")
         command.add_argument("--model-only", action="store_true", help="combine reasoning levels")
+        command.add_argument(
+            "--details", action="store_true", help="show timing evidence and diagnostics"
+        )
+        command.add_argument("--plain", action="store_true", help="ASCII output without color")
+        command.add_argument(
+            "--color",
+            choices=["auto", "always", "never"],
+            default="auto",
+            help="terminal color (respects NO_COLOR)",
+        )
         exports = command.add_mutually_exclusive_group()
         exports.add_argument("--json", action="store_true")
         exports.add_argument("--csv", action="store_true")
@@ -212,7 +222,18 @@ def main() -> int:
             elif args.csv:
                 print(model_csv(model_data), end="")
             else:
-                print(model_table(model_data))
+                use_color = args.color == "always" or (
+                    args.color == "auto" and sys.stdout.isatty() and "NO_COLOR" not in os.environ
+                )
+                print(
+                    model_table(
+                        model_data,
+                        width=shutil.get_terminal_size((88, 24)).columns,
+                        color=use_color,
+                        details=args.details,
+                        plain=args.plain,
+                    )
+                )
         elif args.command == "list":
             rows = build_rows(
                 store.load(),

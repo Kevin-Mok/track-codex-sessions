@@ -88,7 +88,15 @@ Verify automatic work accounting, daily repo/session reports, model working-time
 
 **Action:** codex-time models day
 
-**Expected:** The table labels values as working-time usage for today's America/Toronto date, across all directories and archive states. Known model/reasoning rows rank by descending duration with deterministic ties. Rows show exact model IDs, reasoning levels, percentages, distinct session counts and quality. Unknown model time is separate and unranked, included in total and percentage denominator.
+**Expected:** The table labels values as working-time usage for today's America/Toronto date, across all directories and archive states. Known model/reasoning rows rank by descending duration with deterministic ties. Rows show exact model IDs, reasoning levels, readable durations, percentages and distinct session counts. Emoji headings, readable dates and share bars appear by default; a concise accuracy note replaces raw flags/diagnostics. Use this command without --model-only to see the reasoning-level breakdown. Unknown model time is separate and unranked, included in total and percentage denominator.
+
+**Action:** codex-time models day --model-only; then codex-time models week --model-only
+
+**Expected:** One row per model combines reasoning levels and omits the reasoning column. The top known model has a trophy; Unknown stays unranked. Times use labels such as 2h 4m 15s and short work stays visible, including 39s or 0.25s. Shares are percentages of working time, including tools, rather than token consumption.
+
+**Action:** COLUMNS=40 codex-time models day --plain --details
+
+**Expected:** The narrow stacked layout keeps model IDs, reasoning, time, share and sessions readable. Output is ASCII without ANSI escapes; details reveal quality flags, sampling uncertainty with its non-additive caveat and diagnostics. Normal default output hides that raw evidence. NO_COLOR also suppresses color even with --color always. JSON/CSV exports remain clean and retain their exact accounting and quality evidence.
 
 **Action:** codex-time models week --date 2026-10-06
 

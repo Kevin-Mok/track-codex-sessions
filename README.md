@@ -2,9 +2,15 @@
 
 **Know where your Codex hours—and allowance—go.**
 
-Codex Time is a local time tracker for developers running Codex across projects, models and reasoning levels. It turns session history into a clear picture of how long Codex worked, which models handled that work, and how quickly recorded allowance was consumed—so you can compare workloads with evidence instead of guesswork.
+Codex Time is a local time tracker for developers running Codex across projects, models and reasoning levels. It turns session history into a clear picture of how long Codex worked, which models handled that work, and how quickly recorded allowance was consumed—so it helps developers compare workloads with evidence instead of guesswork.
 
 Tracking runs automatically in a separate user service, including quiet thinking and tool execution while subtracting detected blocking waits. A searchable terminal picker lets you find and resume sessions. Built around read-only integration, recoverable accounting and content-free timing data, the project shows how to make internal runtime evidence useful without saving conversation bodies.
+
+## Tech Stack And Why Chosen
+
+Python 3.12 keeps the app easy to install and inspect. Curses provides a lightweight Linux session picker, Rich formats responsive allowance reports, websockets reads the existing Codex control socket, and Pydantic validates versioned JSON. The application separates ingestion, live observation, accounting, storage, reports and presentation; JSON remains the source of truth without a proprietary database.
+
+See [smoke tests](docs/smoke-tests.md), the [implementation record](plans/codex-session-time-tracker.md), the [model-usage plan](plans/codex-model-usage-reports.md), and the [Cursor handoff prompt](prompts/codex-model-usage-reports.md). Sanitized fixtures, a real disposable Unix WebSocket server, an actual daemon process, a curses PTY, and native timetrace readers exercise the boundaries. Tests cover waits, concurrency, child exclusion, model switches, history, duplicates, schema drift, restart, Git rollback, midnight and DST.
 
 ## At a glance
 
@@ -12,12 +18,6 @@ Tracking runs automatically in a separate user service, including quiet thinking
 - **See where time went:** report working time by date, directory, session, model and reasoning level.
 - **Watch your allowance:** see the latest recorded balance and observed percentage points consumed per working hour, with missing evidence made visible.
 - **Keep your data:** inspect versioned JSON locally or store it in a separate Git repository.
-
-## Tech stack and why chosen
-
-Python 3.12 keeps the app easy to install and inspect. Curses provides a lightweight Linux session picker, Rich formats responsive allowance reports, websockets reads the existing Codex control socket, and Pydantic validates versioned JSON. The application separates ingestion, live observation, accounting, storage, reports and presentation; JSON remains the source of truth without a proprietary database.
-
-See [smoke tests](docs/smoke-tests.md), the [implementation record](plans/codex-session-time-tracker.md), the [model-usage plan](plans/codex-model-usage-reports.md), and the [Cursor handoff prompt](prompts/codex-model-usage-reports.md). Sanitized fixtures, a real disposable Unix WebSocket server, an actual daemon process, a curses PTY, and native timetrace readers exercise the boundaries. Tests cover waits, concurrency, child exclusion, model switches, history, duplicates, schema drift, restart, Git rollback, midnight and DST.
 
 ```text
 codex-time                  searchable sessions → Enter to resume
@@ -93,7 +93,7 @@ For isolated or alternate installations, pass **absolute** directory paths:
 
 The socket override must point to an already running Codex server. The tracker never starts a server or loads, subscribes to, archives, or modifies threads. Only a deliberate Enter in the picker launches `codex resume SESSION_ID` in that session’s recorded current working directory.
 
-## Daily use
+## Daily Use And CLI Commands
 
 Open `codex-time` from a project directory. The picker initially shows unarchived sessions in that directory with title, cwd, runtime state, latest observed model/reasoning level, today/lifetime work and quality flags. Details show attributed model information; timers keep their own visible line even with long names or paths. A content-free shortened session ID is used when there is no explicit name.
 
@@ -148,7 +148,11 @@ The same wait-subtracted root-session accounting powers the existing reports: co
 Rank daily, weekly or monthly usage by exact model ID and reasoning level:
 
 ```bash
-codex-time models day
+codex-time models day                    # split by model and reasoning level
+codex-time models day --model-only       # combine reasoning levels per model
+codex-time models week --model-only
+codex-time models day --details          # timing evidence and diagnostics
+codex-time models day --plain            # ASCII without color
 codex-time models week --date 2026-10-06
 codex-time models month --date 2026-10-06 --cwd /absolute/project --archive active
 codex-time models week --model-only --json
@@ -158,7 +162,7 @@ codex-time --timezone America/Toronto models day --date 2026-10-06
 
 These commands default to the current calendar period in America/Toronto, across all directories and archive states. Weeks begin Monday; months use calendar boundaries. `--date YYYY-MM-DD` selects the containing period. `--cwd PATH` filters the original directory of each counted interval; `--archive active|archived|all` defaults to `all`. `--model-only` combines reasoning levels. The default terminal table and mutually exclusive `--json`/`--csv` exports share the same totals and rows.
 
-Known model/reasoning rows rank by descending working duration with deterministic ties. Each row includes rank, exact model ID, reasoning level, duration, percentage, distinct contributing session count and quality indicators. Unknown model time appears separately without a rank and remains in the total and percentage denominator. The sum of all rows equals the existing root-session report total with matching dates, timezone, directory and archive filters. Concurrent roots count independently; children add no model-report time.
+Known model/reasoning rows rank by descending working duration with deterministic ties. Each row includes rank, exact model ID, reasoning level, readable duration, percentage and distinct contributing session count. Emoji cues, share bars and readable dates make the default view easy to scan; narrow terminals and long names use stacked rows. `--model-only` omits the redundant reasoning column. Quality indicators and raw diagnostics appear with `--details`, while a short accuracy note remains visible by default. `--plain` produces ASCII without color; `--color auto|always|never` respects `NO_COLOR`, and automatic color is disabled when piped. Unknown model time appears separately without a rank and remains in the total and percentage denominator. The sum of all rows equals the existing root-session report total with matching dates, timezone, directory and archive filters. Concurrent roots count independently; children add no model-report time.
 
 Attribution comes from recorded rollout `turn_context.model` and `turn_context.effort`, tied to stable session/turn IDs. The first context applies from that turn's start; later changes split counted time at their recorded timestamps. Reimported context evidence is deduplicated; repeated settings do not split usage. Distinct observation timestamps remain available to detect conflicting evidence. Missing fields stay Unknown, and unresolved conflicts stay Unknown with a content-free diagnostic. Current SQLite settings never supply historical model attribution. This measures working-time usage, including tools and delegated work; it does not measure model efficiency or output quality.
 

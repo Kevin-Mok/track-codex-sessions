@@ -262,7 +262,13 @@ def test_cli_table_json_csv_share_rows_and_options(tmp_path: Path) -> None:
         table = invoke(*args)
         assert table.returncode == 0
         assert "working-time usage" in table.stdout.lower()
-        assert "0:03:00" in table.stdout and "0:02:00" in table.stdout and "Unknown" in table.stdout
+        assert "3m" in table.stdout and "2m" in table.stdout and "Unknown" in table.stdout
+        assert "🤖" in table.stdout
+        assert "--details" in invoke(*args, "--help").stdout
+        detailed = invoke(*args, "--details", "--plain", "--color", "always")
+        assert detailed.returncode == 0, detailed.stderr
+        assert detailed.stdout.isascii() and "\x1b" not in detailed.stdout
+        assert json.loads(invoke(*args, "--details", "--json").stdout) == result
         assert "50.00%" in table.stdout
     assert invoke("models", "day", "--json", "--csv").returncode == 2
     assert invoke("models", "week", "--date", "bad").returncode == 2
