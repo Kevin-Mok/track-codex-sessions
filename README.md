@@ -137,6 +137,8 @@ codex-time day --json
 
 From a source checkout, use `uv run codex-time day`; run `./scripts/setup.sh` to update the installed command. Today uses the selected `--timezone` (America/Toronto by default). Unlike `list` and `report`, `day` includes **all directories and archive states** by default; `--archive active|archived|all` narrows that scope. `--cwd` selects an exact recorded working directory, rather than inferring Git roots or combining subdirectories.
 
+A directory-share summary at the top shows progress bars, percentages and working durations before the session details.
+
 Each directory shows its full path, total duration and percentage of the selected day's work. Its indented sessions show title, stable ID and duration **in that directory on that day**. A session resumed elsewhere can appear under both directories, with each portion counted once. Empty days say that no work was recorded. Long paths and titles wrap while time values remain visible in narrow terminals.
 
 The same wait-subtracted root-session accounting powers the existing reports: concurrent roots add, child agents add no separate time, and local midnight/DST determine the day's boundaries. These values measure recorded Codex work rather than exact human attention. `--details` exposes quality flags and diagnostics; `--plain` is ASCII and color-free. `--color auto|always|never`, `NO_COLOR` and piped output follow the allowance report's conventions. JSON carries exact `total_microseconds` at day, directory and session levels; their sums conserve the total. Whole-second durations round down for display; positive subsecond work remains visible, such as `0.25s`.

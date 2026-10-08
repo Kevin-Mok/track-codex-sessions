@@ -76,6 +76,19 @@ def day_table(
         say("No recorded work for this day.", "bold")
         say("Choose another date with --date YYYY-MM-DD, or check codex-time status.")
     else:
+        say("Directory shares", "bold")
+        size = max(4, min(24, width - 12))
+        for directory in data["directories"]:
+            say(directory["cwd"] or "Unknown directory", "bold")
+            share = max(0, min(100, directory["share_percent"]))
+            filled = max(1, round(share * size / 100)) if share > 0 else 0
+            progress = Text(("#" if plain else "━") * filled, style="cyan")
+            progress.append(("-" if plain else "·") * (size - filled), style="bright_black")
+            progress.append(f"  {share:5.1f}%")
+            console.print(Padding(progress, (0, 0, 0, 2)))
+            say("Time: " + _working_duration(directory["total_microseconds"]), indent=2)
+        say()
+        say("Session details", "bold")
         for directory in data["directories"]:
             cwd = directory["cwd"]
             title = PurePath(cwd).name or cwd or "Unknown directory"

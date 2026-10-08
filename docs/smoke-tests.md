@@ -68,6 +68,10 @@ Verify automatic work accounting, daily repo/session reports, model working-time
 
 **Expected:** Human-readable date/timezone and a day total appear above directories ranked by duration, each with its full cwd, total and share. Sessions beneath each directory show title, stable ID and that day's duration in that directory. Archived sessions contribute by default, root concurrency adds, children add no separate time, and a session resumed elsewhere retains the original cwd for each portion. Use a date with recorded work; an empty day gives an explicit message.
 
+**Action:** Run `uv run codex-time day --plain` for a day with recorded work, then repeat in a terminal about 48 columns wide.
+
+**Expected:** The "Directory shares" summary shows every directory's path, ASCII share bar, percentage and working duration before "Session details". Paths wrap within the terminal width; session titles and durations remain visible in the details.
+
 **Action:** uv run codex-time day --date 2026-10-06 --json
 
 **Expected:** Nested session total_microseconds sum to their directory total_microseconds; directory totals sum to the day total_microseconds. With matching date/timezone, that day total equals `report --all-dirs --archive all --from 2026-10-06 --to 2026-10-06 --json`. JSON seconds are derived once from integer counters. Reports leave ledger/native-record bytes untouched; the running observer may independently record new work.

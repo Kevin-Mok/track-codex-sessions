@@ -73,12 +73,17 @@ def test_day_directory_session_hierarchy_preserves_visible_values() -> None:
     assert "1h 1m 1s" in text and "1m 2s" in text and "37s" in text
     assert "99.0%" in text and "1.0%" in text
     assert text.index("Day total") < text.index("tracker") < text.index("Build daily report")
-    assert text.index("Review report") < text.index("notes") < text.index("Record notes")
+    detail_text = text.split("Session details", 1)[1]
+    assert (
+        detail_text.index("Review report")
+        < detail_text.index("notes")
+        < detail_text.index("Record notes")
+    )
     assert "/home/kevin/coding/tracker" in text and "/tmp/notes" in text
     assert "same-prefix-first-session" in text and "same-prefix-second-session" in text
     assert "historical_upper_bound" not in text and "damaged record" not in text
     assert "estimated" in text and "concurrent" in text and "--details" in text
-    for line in text.splitlines():
+    for line in detail_text.splitlines():
         if "1h 1m 1s" in line:
             assert line.startswith("    ") and "Build daily report" not in line
         if "1h 2m 3s" in line:
@@ -158,3 +163,22 @@ def test_nonzero_subsecond_work_is_visible_and_missing_metadata_has_fallbacks() 
     text = day_table(data)
     assert "Unknown directory" in text and "Untitled session" in text
     assert "0.25s" in text and "same-prefix-first-session" in text
+
+
+@pytest.mark.parametrize("width", [20, 48, 88])
+def test_directory_share_bars_precede_all_session_details(width: int) -> None:
+    data = example()
+    before = copy.deepcopy(data)
+    output = day_table(data, width=width, plain=True)
+    assert "Directory shares" in output
+    summary, details = output.split("Session details", 1)
+    compact = "".join(summary.split())
+    assert "/home/kevin/coding/tracker" in compact and "/tmp/notes" in compact
+    assert "99.0%" in compact and "1.0%" in compact
+    assert "#" in summary and "-" in summary
+    assert "1h2m3s" in compact and "37s" in compact
+    assert "Build daily report" not in summary
+    assert "Build daily report" in details and "Review report" in details
+    assert all(cell_len(line) <= width for line in output.splitlines())
+    assert output.isascii() and "\x1b" not in output
+    assert data == before
