@@ -100,7 +100,7 @@ def model_table(
     say()
     if not data["rows"]:
         say("No counted work in this period.")
-        say("Try another --date or check codex-time status.", "dim")
+        say("Try another --date or check codex-time health.", "dim")
     elif width < 70 or any(
         cell_len(safe_text(row["model_id"] or "Unknown")) > max(16, width // 3)
         for row in data["rows"]

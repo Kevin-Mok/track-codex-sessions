@@ -1,4 +1,4 @@
-# Track Codex allowance burn
+# Track Codex allowance consumption
 
 Track observed allowance percentage changes alongside existing Codex working time. Keep the observer running, inspect daily or longer reports, and save exports to compare workloads with similar model and reasoning mixes. Each report shows matched consumption and excluded changes so the estimate can be reproduced without assigning shared quota usage to an individual model.
 
@@ -11,7 +11,7 @@ Update the installed command and service from this checkout, then wait for a fre
 ```bash
 ./scripts/setup.sh
 ./scripts/check.sh
-codex-time status --json
+codex-time health --json
 ```
 
 Ledger version 3 preserves existing timing, waits and model attribution from version 1 or 2. Old ingestion offsets are invalidated once to backfill available allowance history; subsequent collection is incremental. Missing source files retain previously saved work and readings. Reimport and restart deduplicate evidence.
@@ -28,17 +28,19 @@ Allowance readings are only available when Codex records them. A running service
 
 ## Report and export
 
+Use `codex-time overview` to combine today's allowance with all recorded model work, grouped by model and reasoning. Use `allowance` below to focus on matched consumption evidence and preserve JSON/CSV exports. The silent legacy alias `burn` continues to accept the same arguments and exports.
+
 ```bash
-codex-time burn day
-codex-time burn week --date 2026-10-06
-codex-time burn month --date 2026-10-06
-codex-time --timezone America/Toronto burn day --date 2026-10-06
-codex-time burn week --date 2026-10-06 --json > burn-2026-10-05.json
-codex-time burn week --date 2026-10-06 --csv > burn-2026-10-05.csv
-codex-time burn week --date 2026-10-06 --window-minutes 10080 --limit-id codex --max-gap-seconds 600
+codex-time allowance day
+codex-time allowance week --date 2026-10-06
+codex-time allowance month --date 2026-10-06
+codex-time --timezone America/Toronto allowance day --date 2026-10-06
+codex-time allowance week --date 2026-10-06 --json > allowance-2026-10-05.json
+codex-time allowance week --date 2026-10-06 --csv > allowance-2026-10-05.csv
+codex-time allowance week --date 2026-10-06 --window-minutes 10080 --limit-id codex --max-gap-seconds 600
 ```
 
-The default selects the current calendar period in America/Toronto. Weeks begin Monday; months use calendar boundaries. `--date YYYY-MM-DD` selects the containing period and the global `--timezone` changes its boundaries. Global options precede `burn`; `--json` and `--csv` are mutually exclusive. The formatted terminal view and both exports use the same report data.
+The default selects the current calendar period in America/Toronto. Weeks begin Monday; months use calendar boundaries. `--date YYYY-MM-DD` selects the containing period and the global `--timezone` changes its boundaries. Global options precede `allowance`; `--json` and `--csv` are mutually exclusive. The formatted terminal view and both exports use the same report data.
 
 `--window-minutes` selects the recorded allowance window, defaulting to 10,080 minutes (weekly). `--limit-id` defaults to `codex`. These selectors do not create missing readings or infer a different allowance window. `--max-gap-seconds` defaults to 600; keep the same value when comparing exports because it changes which observations qualify.
 
@@ -49,11 +51,11 @@ Reports include all root sessions, directories and archive states. There is no d
 The report leads with remaining allowance and a usage bar, followed by the observed burn rate and matched working duration. Model IDs and reasoning levels have separate, aligned work-share rows. Dates and reading times use the selected local timezone. Short notes explain low confidence and excluded consumption; a model's share is its share of working time, not an individual quota cost.
 
 ```bash
-codex-time burn day --details
-codex-time burn day --plain
-codex-time burn day --color never
-NO_COLOR=1 codex-time burn day
-codex-time burn week --plain > burn-week.txt
+codex-time allowance day --details
+codex-time allowance day --plain
+codex-time allowance day --color never
+NO_COLOR=1 codex-time allowance day
+codex-time allowance week --plain > allowance-week.txt
 ```
 
 Use `--details` for raw quality flags, reset metadata and rounding sensitivity. `--color auto|always|never` defaults to `auto`, which colors an interactive terminal and omits ANSI colors when output is piped. `NO_COLOR` disables color. Use `--plain` for an ASCII, color-free report in terminals with limited Unicode support. The layout adapts to available width; long model labels wrap instead of hiding their rates. These display options do not change observations, calculations, JSON or CSV exports.
@@ -88,4 +90,4 @@ The append-only `quota-observations.jsonl` journal saves allowlisted allowance m
 
 Back up the durable store with the service stopped before upgrading, including both `ledger.json` and `quota-observations.jsonl` when present. The journal keeps quota history out of full timing-ledger rewrites; embedded v3 quota evidence migrates without loss. Invalid durable journal lines block writes with a restore-backup error rather than being silently discarded. Version 3 remains readable by this version; an older app may require its matching pre-upgrade ledger backup. Never replace or mechanically merge the live ledger or journal while the writer runs. Restore them together from the same snapshot; ingestion fingerprints cover both. Native timetrace records continue to represent working time; allowance readings do not add native records.
 
-The implementation and verification records are in [the tracking ExecPlan](../plans/codex-model-burn-tracking.md) and [the terminal presentation plan](../plans/codex-burn-terminal-ux.md). See the grouped [smoke checks](smoke-tests.md#allowance-burn-tracking) for reproducible installed-command, export and reset checks.
+The implementation and verification records are in [the tracking ExecPlan](../plans/codex-model-burn-tracking.md) and [the terminal presentation plan](../plans/codex-burn-terminal-ux.md). See the grouped [smoke checks](smoke-tests.md#allowance-balance-and-consumption) for reproducible installed-command, export and reset checks.

@@ -158,7 +158,7 @@ def burn_table(
         say()
     if not data["rows"]:
         say("No allowance readings for this period.", "bold")
-        say("Check codex-time status, or choose a date with recorded usage.")
+        say("Check codex-time health, or choose a date with recorded usage.")
     else:
         counts = Counter(row["date"] for row in data["rows"])
         multiple_streams = len({(r["plan_type"], r["bucket"]) for r in data["rows"]}) > 1

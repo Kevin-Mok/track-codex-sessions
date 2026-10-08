@@ -148,7 +148,7 @@ def test_empty_day_has_zero_total_and_actionable_next_step() -> None:
     data.update(total_seconds=0.0, total_microseconds=0, directories=[])
     text = day_table(data)
     assert "Day total" in text and "0s" in text
-    assert "No recorded work" in text and "codex-time status" in text
+    assert "No recorded work" in text and "codex-time health" in text
     assert "date" in text and "--date" in text
     assert "99.0%" not in text
 

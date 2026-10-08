@@ -74,7 +74,7 @@ def day_table(
 
     if not data["directories"]:
         say("No recorded work for this day.", "bold")
-        say("Choose another date with --date YYYY-MM-DD, or check codex-time status.")
+        say("Choose another date with --date YYYY-MM-DD, or check codex-time health.")
     else:
         say("Directory shares", "bold")
         size = max(4, min(24, width - 12))

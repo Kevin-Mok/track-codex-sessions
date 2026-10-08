@@ -8,9 +8,9 @@ Tracking runs automatically in a separate user service, including quiet thinking
 
 ## Tech Stack And Why Chosen
 
-Python 3.12 keeps the app easy to install and inspect. Curses provides a lightweight Linux session picker, Rich formats responsive allowance reports, websockets reads the existing Codex control socket, and Pydantic validates versioned JSON. The application separates ingestion, live observation, accounting, storage, reports and presentation; JSON remains the source of truth without a proprietary database.
+Python 3.12 keeps the app easy to install and inspect. Curses provides a lightweight Linux session picker, Rich formats responsive overview, model and allowance reports, websockets reads the existing Codex control socket, and Pydantic validates versioned JSON. The application separates ingestion, live observation, accounting, storage, reports and presentation; JSON remains the source of truth without a proprietary database.
 
-See [smoke tests](docs/smoke-tests.md), the [implementation record](plans/codex-session-time-tracker.md), the [model-usage plan](plans/codex-model-usage-reports.md), and the [Cursor handoff prompt](prompts/codex-model-usage-reports.md). Sanitized fixtures, a real disposable Unix WebSocket server, an actual daemon process, a curses PTY, and native timetrace readers exercise the boundaries. Tests cover waits, concurrency, child exclusion, model switches, history, duplicates, schema drift, restart, Git rollback, midnight and DST.
+See [smoke tests](docs/smoke-tests.md), the [implementation record](plans/codex-session-time-tracker.md), the [model-usage plan](plans/codex-model-usage-reports.md), the [overview plan](plans/overview-command-layout.md), and the [Cursor handoff prompt](prompts/overview-command-layout.md). Sanitized fixtures, a real disposable Unix WebSocket server, an actual daemon process, a curses PTY, and native timetrace readers exercise the boundaries. Tests cover waits, concurrency, child exclusion, model switches, history, duplicates, schema drift, restart, Git rollback, midnight and DST.
 
 ## At a glance
 
@@ -20,19 +20,20 @@ See [smoke tests](docs/smoke-tests.md), the [implementation record](plans/codex-
 - **Keep your data:** inspect versioned JSON locally or store it in a separate Git repository.
 
 ```text
-codex-time                  searchable sessions → Enter to resume
-codex-time day              today → repo totals → session durations
-codex-time report --all-dirs working time by date, directory and session
-codex-time models week      ranked working-time usage by model and reasoning
-codex-time burn week        observed allowance points per working hour
+codex-time                       searchable sessions → Enter to resume
+codex-time overview              today → allowance → model totals and reasoning
+codex-time projects              today → directory shares → session durations
+codex-time history --all-dirs     working time by date, directory and session
+codex-time model-time week       ranked working time by model and reasoning
+codex-time allowance week        allowance balance and observed consumption rate
 ```
 
 ## From “where did my allowance go?” to a readable answer
 
-Ask for today's tracked workload and the latest recorded weekly allowance balance:
+Use `codex-time overview` for today's allowance and recorded model work in one report. The dedicated allowance report below shows the evidence used to calculate an observed consumption rate:
 
 ```bash
-codex-time burn day --date 2026-10-06 --plain
+codex-time allowance day --date 2026-10-06 --plain
 ```
 
 Actual local output captured October 6, 2026 (`--plain` keeps it color-free and easy to copy):
@@ -82,7 +83,7 @@ cd track-codex-sessions
 codex-time
 ```
 
-Setup rebuilds and installs the local packaged `codex-time` command with uv, including source edits under an unchanged package version, and enables `codex-time.service`. Its first scan may take several minutes for a large history; `systemctl --user is-active codex-time.service` can say active before that scan finishes. `codex-time status` reports a fresh heartbeat once initialization is complete. Restart-on-failure keeps the service independent of the UI. Tracking stops at logout unless the user manager remains running; unobserved time retains uncertainty.
+Setup rebuilds and installs the local packaged `codex-time` command with uv, including source edits under an unchanged package version, and enables `codex-time.service`. Its first scan may take several minutes for a large history; `systemctl --user is-active codex-time.service` can say active before that scan finishes. `codex-time health` reports a fresh heartbeat once initialization is complete. Restart-on-failure keeps the service independent of the UI. Tracking stops at logout unless the user manager remains running; unobserved time retains uncertainty.
 
 For isolated or alternate installations, pass **absolute** directory paths:
 
@@ -112,30 +113,65 @@ Open `codex-time` from a project directory. The picker initially shows unarchive
 “Active” in the archive filter means unarchived. Runtime working/waiting/idle/unknown is separate. A stale or unavailable socket is shown as unknown, never interpreted from output silence or CPU use. Missing cwd or Codex launch failures appear as actionable notices; terminal settings are restored before launch and on UI exit.
 
 ```bash
-codex-time list --all-dirs --archive all --sort time --search tracker
-codex-time list --json
-codex-time report --all-dirs --archive all --from 2026-10-01 --to 2026-10-31
-codex-time report --session SESSION_ID --all-dirs --json
-codex-time --timezone America/Toronto report --cwd /absolute/project
-codex-time status --json
+codex-time sessions --all-dirs --archive all --sort time --search tracker
+codex-time sessions --json
+codex-time history --all-dirs --archive all --from 2026-10-01 --to 2026-10-31
+codex-time history --session SESSION_ID --all-dirs --json
+codex-time --timezone America/Toronto history --cwd /absolute/project
+codex-time health --json
 ```
 
-Global options precede the subcommand: `--codex-home`, `--data-dir`, `--state-dir`, `--socket`, and `--timezone`. No subcommand opens the UI. The `list` and `report` commands select the current directory and unarchived sessions by default; directory reports count only intervals attributed to that directory, including a session that has since resumed elsewhere. Date endpoints are inclusive. `--timezone` changes display/report dates; native record directories always use America/Toronto.
+| Command | Purpose |
+| --- | --- |
+| `overview [day\|week\|month]` | Combined allowance and model-work summary; defaults to today |
+| `allowance day\|week\|month` | Allowance balance and observed consumption rate |
+| `model-time day\|week\|month` | Model and reasoning working-time rankings |
+| `projects` | Daily directory shares and session durations |
+| `sessions` | Search and list sessions |
+| `history` | Working-time report over an inclusive date range |
+| `health` | Tracker health and accuracy diagnostics |
+| `resume` | Open the session picker |
+
+`codex-time` without arguments also opens the picker. `daemon` and `import-history` retain their existing behavior. Existing scripts can keep using the silent aliases `burn` → `allowance`, `models` → `model-time`, `day` → `projects`, `list` → `sessions`, `report` → `history`, and `status` → `health`. Their arguments, defaults, JSON/CSV exports and exit codes are preserved; top-level help advertises the canonical names.
+
+Global options precede the subcommand: `--codex-home`, `--data-dir`, `--state-dir`, `--socket`, and `--timezone`. The `sessions` and `history` commands select the current directory and unarchived sessions by default; directory reports count only intervals attributed to that directory, including a session that has since resumed elsewhere. Date endpoints are inclusive. `--timezone` changes display/report dates; native record directories always use America/Toronto.
+
+### Combined allowance and model work
+
+Start with a single report for today, or choose a calendar week or month:
+
+```bash
+codex-time overview
+codex-time overview week --date 2026-10-06
+codex-time overview month --details
+codex-time overview --plain
+codex-time overview --json
+codex-time --timezone America/Toronto overview day --date 2026-10-06
+codex-time overview week --window-minutes 10080 --limit-id codex --max-gap-seconds 600
+```
+
+The report shows a readable date/timezone and recorded working duration, followed by allowance balance, observed consumption and ranked model totals. Reasoning rows sit beneath each model. Model and reasoning shares use **all recorded work in the selected period**, including Unknown attribution; each model's session count is the distinct union of its contributing sessions. Reasoning-row session counts can overlap and must not be added together.
+
+Allowance rates use **only work matched to qualifying allowance readings**. The report shows matched percentage points and duration, excluded consumption, and a short confidence warning; the matched duration can differ from the recorded-work total. Missing readings stay explicit, and separate reset cohorts retain their own readable date/reset labels. Model shares describe work, including tools and delegation, rather than each model's quota cost.
+
+`overview` uses all directories and archive states. Use `projects`, `model-time`, `sessions` or `history` for filtered reports. `--date YYYY-MM-DD` selects the containing period, weeks start Monday, and the selected global `--timezone` defines boundaries. Allowance defaults are the `codex` limit, its 10,080-minute weekly window and a maximum 600-second observation gap.
+
+`--details` reveals technical flags, uncertainty, matched model mixes and diagnostics. `--plain` is ASCII without color; `--color auto|always|never` respects `NO_COLOR`, and automatic output omits color when piped. `--json` emits a clean object with `allowance`, `model_totals` and `reasoning`, each containing the full existing report schema. Overview has no CSV export; the dedicated reports retain their existing JSON/CSV contracts. All sections use one loaded ledger snapshot, and report commands leave recorded data unchanged.
 
 ### Daily repo and session time
 
 See the day's total working time, then each repo/directory with its share of the day and the sessions that contributed. Directories and sessions rank by working duration, so the largest blocks appear first.
 
 ```bash
-codex-time day
-codex-time day --date 2026-10-06
-codex-time day --date 2026-10-06 --cwd /absolute/project
-codex-time day --session SESSION_ID --details
-codex-time day --plain
-codex-time day --json
+codex-time projects
+codex-time projects --date 2026-10-06
+codex-time projects --date 2026-10-06 --cwd /absolute/project
+codex-time projects --session SESSION_ID --details
+codex-time projects --plain
+codex-time projects --json
 ```
 
-From a source checkout, use `uv run codex-time day`; run `./scripts/setup.sh` to update the installed command. Today uses the selected `--timezone` (America/Toronto by default). Unlike `list` and `report`, `day` includes **all directories and archive states** by default; `--archive active|archived|all` narrows that scope. `--cwd` selects an exact recorded working directory, rather than inferring Git roots or combining subdirectories.
+From a source checkout, use `uv run codex-time projects`; run `./scripts/setup.sh` to update the installed command. Today uses the selected `--timezone` (America/Toronto by default). Unlike `sessions` and `history`, `projects` includes **all directories and archive states** by default; `--archive active|archived|all` narrows that scope. `--cwd` selects an exact recorded working directory, rather than inferring Git roots or combining subdirectories.
 
 A directory-share summary at the top shows progress bars, percentages and working durations before the session details.
 
@@ -148,16 +184,16 @@ The same wait-subtracted root-session accounting powers the existing reports: co
 Rank daily, weekly or monthly usage by exact model ID and reasoning level:
 
 ```bash
-codex-time models day                    # split by model and reasoning level
-codex-time models day --model-only       # combine reasoning levels per model
-codex-time models week --model-only
-codex-time models day --details          # timing evidence and diagnostics
-codex-time models day --plain            # ASCII without color
-codex-time models week --date 2026-10-06
-codex-time models month --date 2026-10-06 --cwd /absolute/project --archive active
-codex-time models week --model-only --json
-codex-time models month --date 2026-10-06 --csv
-codex-time --timezone America/Toronto models day --date 2026-10-06
+codex-time model-time day                    # split by model and reasoning level
+codex-time model-time day --model-only       # combine reasoning levels per model
+codex-time model-time week --model-only
+codex-time model-time day --details          # timing evidence and diagnostics
+codex-time model-time day --plain            # ASCII without color
+codex-time model-time week --date 2026-10-06
+codex-time model-time month --date 2026-10-06 --cwd /absolute/project --archive active
+codex-time model-time week --model-only --json
+codex-time model-time month --date 2026-10-06 --csv
+codex-time --timezone America/Toronto model-time day --date 2026-10-06
 ```
 
 These commands default to the current calendar period in America/Toronto, across all directories and archive states. Weeks begin Monday; months use calendar boundaries. `--date YYYY-MM-DD` selects the containing period. `--cwd PATH` filters the original directory of each counted interval; `--archive active|archived|all` defaults to `all`. `--model-only` combines reasoning levels. The default terminal table and mutually exclusive `--json`/`--csv` exports share the same totals and rows.
@@ -178,18 +214,18 @@ systemctl --user start codex-time.service
 
 Repeating import or restarting cannot add duplicate turns or records. Session identity survives renames and resumes; per-turn cwd stays with the original work. Concurrent root-session totals may exceed elapsed clock time. Child agents appear as excluded and contribute no additional totals.
 
-### Allowance burn tracking
+### Allowance balance and consumption
 
 The observer automatically saves allowance readings from available rollout history and subsequent events. Inspect account-wide consumption alongside the root workload that was active between readings:
 
 ```bash
-codex-time burn day
-codex-time burn week --date 2026-10-06
-codex-time burn day --details
-codex-time burn day --plain
-codex-time burn month --date 2026-10-06 --csv
-codex-time --timezone America/Toronto burn week --date 2026-10-06 --json
-codex-time burn week --window-minutes 10080 --limit-id codex --max-gap-seconds 600
+codex-time allowance day
+codex-time allowance week --date 2026-10-06
+codex-time allowance day --details
+codex-time allowance day --plain
+codex-time allowance month --date 2026-10-06 --csv
+codex-time --timezone America/Toronto allowance week --date 2026-10-06 --json
+codex-time allowance week --window-minutes 10080 --limit-id codex --max-gap-seconds 600
 ```
 
 Defaults are the current calendar period in America/Toronto, Monday weeks, the `codex` limit, its 10,080-minute weekly window, and a maximum 600-second observation gap. `--date` selects the containing period; `--json` and `--csv` are mutually exclusive. All directories and archive states contribute; concurrent roots sum and children add no working hours.

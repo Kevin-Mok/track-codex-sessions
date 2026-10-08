@@ -17,3 +17,5 @@ Keep local tracker changes grounded in lifecycle and read-only runtime evidence.
 - When staging only this session's portion of a shared plan, trim section-separator blank lines at the staged EOF and validate the index diff; leave the full working-tree plan intact.
 
 - Share percentage labels must use the same formatter in table and stacked layouts; a positive tiny share must not become zero only because terminal width or model-name length changes.
+
+- Wrap cohort labels with Rich Text instead of Rule titles: narrow Rule titles may truncate reset evidence and insert a Unicode ellipsis even in ASCII output.

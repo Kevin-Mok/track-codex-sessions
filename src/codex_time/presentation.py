@@ -392,7 +392,8 @@ def _browse(
 def run_ui(load: SnapshotLoader, timezone_name: str, cwd: str, codex_home: Path) -> None:
     if not sys.stdin.isatty() or not sys.stdout.isatty():
         raise ValueError(
-            "The session browser needs a terminal. Use codex-time list for noninteractive output."
+            "The session browser needs a terminal. "
+            "Use codex-time sessions for noninteractive output."
         )
     try:
         curses.wrapper(_browse, load, timezone_name, cwd, codex_home)

@@ -19,4 +19,4 @@ executable="$(uv tool dir --bin)/codex-time"
 [[ -x "$executable" ]] || { echo "Entry point missing: $executable. Run scripts/setup.sh." >&2; exit 1; }
 "$executable" --help >/dev/null
 systemctl --user is-active codex-time.service
-"$executable" "${arguments[@]}" status
+"$executable" "${arguments[@]}" health

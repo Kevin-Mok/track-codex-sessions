@@ -16,9 +16,20 @@ from codex_time.daemon import import_history, observations, run_daemon, runtime_
 from codex_time.day_output import day_table
 from codex_time.model_output import model_csv, model_table
 from codex_time.model_usage import model_report
+from codex_time.overview import overview_report
+from codex_time.overview_output import overview_table
 from codex_time.presentation import build_rows, duration, run_ui
 from codex_time.reporting import daily_report, report
 from codex_time.storage import Store, StoreError
+
+ALIASES = {
+    "burn": "allowance",
+    "models": "model-time",
+    "day": "projects",
+    "list": "sessions",
+    "report": "history",
+    "status": "health",
+}
 
 
 def parser() -> argparse.ArgumentParser:
@@ -32,18 +43,30 @@ def parser() -> argparse.ArgumentParser:
     result.add_argument("--state-dir", type=Path)
     result.add_argument("--socket", type=Path, help="existing Unix WebSocket control socket")
     result.add_argument("--timezone", default="America/Toronto")
-    sub = result.add_subparsers(dest="command")
+    sub = result.add_subparsers(
+        dest="command",
+        metavar="{overview,allowance,model-time,projects,sessions,history,health,resume,daemon,import-history}",
+    )
+    canonical: dict[str, argparse.ArgumentParser] = {}
     sub.add_parser("daemon", help="track independently of the UI")
     sub.add_parser("import-history", help="idempotently reconcile historical lifecycle turns")
-    status = sub.add_parser("status", help="show observer health and accuracy diagnostics")
+    status = sub.add_parser("health", help="show observer health and accuracy diagnostics")
     status.add_argument("--json", action="store_true")
-    for name in ("list", "report"):
-        command = sub.add_parser(name)
+    canonical["health"] = status
+    sub.add_parser("resume", help="open the searchable session picker")
+    for name in ("sessions", "history"):
+        command = sub.add_parser(
+            name,
+            help="search and list sessions"
+            if name == "sessions"
+            else "report working time over a date range",
+        )
+        canonical[name] = command
         command.add_argument("--all-dirs", action="store_true")
         command.add_argument("--archive", choices=["active", "archived", "all"], default="active")
         command.add_argument("--cwd", default=os.getcwd())
         command.add_argument("--json", action="store_true")
-        if name == "list":
+        if name == "sessions":
             command.add_argument("--search", default="")
             command.add_argument(
                 "--sort", choices=["updated", "created", "time"], default="updated"
@@ -52,7 +75,8 @@ def parser() -> argparse.ArgumentParser:
             command.add_argument("--session")
             command.add_argument("--from", dest="start", type=date.fromisoformat)
             command.add_argument("--to", dest="end", type=date.fromisoformat)
-    day = sub.add_parser("day", help="show daily directory totals and session durations")
+    day = sub.add_parser("projects", help="show daily directory totals and session durations")
+    canonical["projects"] = day
     day.add_argument("--date", type=date.fromisoformat, dest="selected_date")
     day.add_argument("--cwd", help="count only intervals in this directory")
     day.add_argument("--archive", choices=["active", "archived", "all"], default="all")
@@ -61,7 +85,8 @@ def parser() -> argparse.ArgumentParser:
     day.add_argument("--details", action="store_true", help="show timing quality and diagnostics")
     day.add_argument("--plain", action="store_true", help="ASCII output without color")
     day.add_argument("--color", choices=["auto", "always", "never"], default="auto")
-    models = sub.add_parser("models", help="rank model working-time usage")
+    models = sub.add_parser("model-time", help="rank model working-time usage")
+    canonical["model-time"] = models
     periods = models.add_subparsers(dest="period", required=True)
     for period in ("day", "week", "month"):
         command = periods.add_parser(period, help=f"current calendar {period} working-time usage")
@@ -82,7 +107,8 @@ def parser() -> argparse.ArgumentParser:
         exports = command.add_mutually_exclusive_group()
         exports.add_argument("--json", action="store_true")
         exports.add_argument("--csv", action="store_true")
-    burn = sub.add_parser("burn", help="estimate allowance burn for observed workloads")
+    burn = sub.add_parser("allowance", help="estimate allowance burn for observed workloads")
+    canonical["allowance"] = burn
     burn_periods = burn.add_subparsers(dest="period", required=True)
     for period in ("day", "week", "month"):
         command = burn_periods.add_parser(period)
@@ -101,11 +127,27 @@ def parser() -> argparse.ArgumentParser:
         exports = command.add_mutually_exclusive_group()
         exports.add_argument("--json", action="store_true")
         exports.add_argument("--csv", action="store_true")
+    overview = sub.add_parser("overview", help="combine allowance and complete model working time")
+    overview.add_argument("period", nargs="?", choices=["day", "week", "month"], default="day")
+    overview.add_argument("--date", type=date.fromisoformat, dest="selected_date")
+    overview.add_argument("--window-minutes", type=int, default=10080)
+    overview.add_argument("--limit-id", default="codex")
+    overview.add_argument("--max-gap-seconds", type=int, default=600)
+    overview.add_argument(
+        "--details", action="store_true", help="show matched mixes and technical evidence"
+    )
+    overview.add_argument("--plain", action="store_true", help="ASCII output without color")
+    overview.add_argument("--color", choices=["auto", "always", "never"], default="auto")
+    overview.add_argument("--json", action="store_true")
+    # Parsers without a help entry remain callable but absent from advertised commands.
+    for legacy, name in ALIASES.items():
+        sub.add_parser(legacy, parents=[canonical[name]], add_help=False)
     return result
 
 
 def main() -> int:
     args = parser().parse_args()
+    command = ALIASES.get(args.command, args.command)
     try:
         ZoneInfo(args.timezone)
     except (ZoneInfoNotFoundError, ValueError):
@@ -114,14 +156,14 @@ def main() -> int:
     try:
         store = Store(args.data_dir, args.state_dir)
         home = args.codex_home.expanduser().resolve()
-        if args.command == "daemon":
+        if command == "daemon":
             asyncio.run(run_daemon(store, home, args.socket))
-        elif args.command == "import-history":
+        elif command == "import-history":
             ledger = import_history(store, home)
             print(f"Imported {len(ledger.sessions)} sessions; no duplicate intervals.")
             for message in ledger.diagnostics:
                 print(message, file=sys.stderr)
-        elif args.command == "status":
+        elif command == "health":
             status = runtime_status(store)
             ledger = store.load()
             status["sessions"] = len(ledger.sessions)
@@ -131,7 +173,7 @@ def main() -> int:
             else:
                 for key, value in status.items():
                     print(f"{key}: {value}")
-        elif args.command == "report":
+        elif command == "history":
             if args.start and args.end and args.end < args.start:
                 raise StoreError("report --to must be on or after --from")
             data = report(
@@ -152,7 +194,7 @@ def main() -> int:
                 print(
                     json.dumps({k: data[k] for k in ("days", "directories", "sessions")}, indent=2)
                 )
-        elif args.command == "day":
+        elif command == "projects":
             daily_data = daily_report(
                 store.load(),
                 selected_date=args.selected_date,
@@ -178,7 +220,34 @@ def main() -> int:
                         plain=args.plain,
                     )
                 )
-        elif args.command == "burn":
+        elif command == "overview":
+            overview_data = overview_report(
+                store.load(),
+                period=args.period,
+                selected_date=args.selected_date,
+                timezone_name=args.timezone,
+                window_minutes=args.window_minutes,
+                limit_id=args.limit_id,
+                max_gap_seconds=args.max_gap_seconds,
+            )
+            if args.json:
+                print(json.dumps(overview_data, indent=2))
+            else:
+                use_color = args.color == "always" or (
+                    args.color == "auto"
+                    and sys.stdout.isatty()
+                    and os.environ.get("TERM") != "dumb"
+                )
+                print(
+                    overview_table(
+                        overview_data,
+                        width=shutil.get_terminal_size((88, 24)).columns,
+                        color=use_color,
+                        details=args.details,
+                        plain=args.plain,
+                    )
+                )
+        elif command == "allowance":
             burn_data = burn_report(
                 store.load(),
                 period=args.period,
@@ -207,7 +276,7 @@ def main() -> int:
                         plain=args.plain,
                     )
                 )
-        elif args.command == "models":
+        elif command == "model-time":
             model_data = model_report(
                 store.load(),
                 period=args.period,
@@ -234,7 +303,7 @@ def main() -> int:
                         plain=args.plain,
                     )
                 )
-        elif args.command == "list":
+        elif command == "sessions":
             rows = build_rows(
                 store.load(),
                 observations(store),

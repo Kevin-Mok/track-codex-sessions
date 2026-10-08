@@ -129,7 +129,7 @@ def test_empty_report_explains_what_to_do_and_omits_fake_zero_rate() -> None:
     data["rows"] = []
     data["latest"] = None
     text = burn_table(data)
-    assert "No allowance readings" in text and "codex-time status" in text
+    assert "No allowance readings" in text and "codex-time health" in text
     assert "0.00 pts" not in text and "remaining" not in text
 
 
