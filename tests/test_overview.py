@@ -98,7 +98,7 @@ def test_snapshot_conserves_work_without_reusing_allowance_denominator() -> None
     ledger = sample_ledger()
     before = ledger.model_dump_json()
     data = overview(ledger)
-    assert set(data) == {"allowance", "model_totals", "reasoning"}
+    assert set(data) == {"allowance", "model_totals", "reasoning", "token_usage"}
     totals, reasoning = data["model_totals"], data["reasoning"]
     assert totals["total_microseconds"] == reasoning["total_microseconds"] == 1320_000_000
     assert sum(row["working_microseconds"] for row in totals["rows"]) == 1320_000_000

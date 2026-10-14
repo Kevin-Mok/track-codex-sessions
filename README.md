@@ -1,28 +1,29 @@
 # Codex Time
 
-**Know where your Codex hours—and allowance—go.**
+**Know where your Codex hours, tokens and allowance go.**
 
-Codex Time is a local time tracker for developers running Codex across projects, models and reasoning levels. It turns session history into a clear picture of how long Codex worked, which models handled that work, and how quickly recorded allowance was consumed—so it helps developers compare workloads with evidence instead of guesswork.
+Codex Time is a local time tracker for developers running Codex across projects, models and reasoning levels. It turns session history into a clear picture of how long Codex worked, which models handled that work, how quickly recorded allowance was consumed, and what recorded tokens would cost at today's Standard API rates in USD and CAD—so it helps developers compare workloads with evidence instead of guesswork.
 
-Tracking runs automatically in a separate user service, including quiet thinking and tool execution while subtracting detected blocking waits. A searchable terminal picker lets you find and resume sessions. Built around read-only integration, recoverable accounting and content-free timing data, the project shows how to make internal runtime evidence useful without saving conversation bodies.
+Tracking runs automatically in a separate user service, including quiet thinking and tool execution while subtracting detected blocking waits. A searchable terminal picker lets you find and resume sessions. Built around read-only integration, recoverable accounting and content-free timing and token evidence, the project shows how to make internal runtime evidence useful without saving conversation bodies.
 
 ## Tech Stack And Why Chosen
 
-Python 3.12 keeps the app easy to install and inspect. Curses provides a lightweight Linux session picker, Rich formats responsive overview, model and allowance reports, websockets reads the existing Codex control socket, and Pydantic validates versioned JSON. The application separates ingestion, live observation, accounting, storage, reports and presentation; JSON remains the source of truth without a proprietary database.
+Python 3.12 keeps the app easy to install and inspect. Curses provides a lightweight Linux session picker, Rich formats responsive overview, model and allowance reports, websockets reads the existing Codex control socket, and Pydantic validates versioned JSON. The application separates ingestion, live observation, accounting, storage, reports and presentation; JSON remains the source of truth without a proprietary database. Decimal arithmetic preserves exact token-cost estimates, and a bounded background Bank of Canada check supplies cached CAD conversion.
 
-See [smoke tests](docs/smoke-tests.md), the [implementation record](plans/codex-session-time-tracker.md), the [model-usage plan](plans/codex-model-usage-reports.md), the [overview plan](plans/overview-command-layout.md), and the [Cursor handoff prompt](prompts/overview-command-layout.md). Sanitized fixtures, a real disposable Unix WebSocket server, an actual daemon process, a curses PTY, and native timetrace readers exercise the boundaries. Tests cover waits, concurrency, child exclusion, model switches, history, duplicates, schema drift, restart, Git rollback, midnight and DST.
+See [smoke tests](docs/smoke-tests.md), the [implementation record](plans/codex-session-time-tracker.md), the [model-usage plan](plans/codex-model-usage-reports.md), the [overview plan](plans/overview-command-layout.md), the [token/cost guide](docs/token-cost-reporting.md), the [token/cost plan](plans/codex-token-cost-reporting.md), and the [Cursor handoff prompt](prompts/codex-token-cost-reporting.md). Sanitized fixtures, a real disposable Unix WebSocket server, an actual daemon process, a curses PTY, and native timetrace readers exercise the boundaries. Tests cover waits, concurrency, child exclusion, model switches, history, duplicates, schema drift, restart, Git rollback, midnight and DST.
 
 ## At a glance
 
 - **Find your work:** search sessions across projects and resume one with Enter.
 - **See where time went:** report working time by date, directory, session, model and reasoning level.
 - **Watch your allowance:** see the latest recorded balance and observed percentage points consumed per working hour, with missing evidence made visible.
+- **Compare API costs:** see tokens and Standard API estimates by actual model, root session and recorded directory, including descendants once.
 - **Keep your data:** inspect versioned JSON locally or store it in a separate Git repository.
 
 ```text
 codex-time                       searchable sessions → Enter to resume
-codex-time overview              today → allowance → model totals and reasoning
-codex-time projects              today → directory shares → session durations
+codex-time overview              today → tokens/API cost → allowance → model work
+codex-time projects              today → directories → sessions → model tokens/cost
 codex-time history --all-dirs     working time by date, directory and session
 codex-time model-time week       ranked working time by model and reasoning
 codex-time allowance week        allowance balance and observed consumption rate
@@ -123,40 +124,41 @@ codex-time health --json
 
 | Command | Purpose |
 | --- | --- |
-| `overview [day\|week\|month]` | Combined allowance and model-work summary; defaults to today |
+| `overview [day\|week\|month\|all]` | Tokens/API cost, allowance and model work; defaults to today |
 | `allowance day\|week\|month` | Allowance balance and observed consumption rate |
 | `model-time day\|week\|month` | Model and reasoning working-time rankings |
-| `projects` | Daily directory shares and session durations |
+| `projects [day\|week\|month\|all]` | Directory/session/model tokens, costs and durations |
 | `sessions` | Search and list sessions |
 | `history` | Working-time report over an inclusive date range |
 | `health` | Tracker health and accuracy diagnostics |
 | `resume` | Open the session picker |
 
-`codex-time` without arguments also opens the picker. `daemon` and `import-history` retain their existing behavior. Existing scripts can keep using the silent aliases `burn` → `allowance`, `models` → `model-time`, `day` → `projects`, `list` → `sessions`, `report` → `history`, and `status` → `health`. Their arguments, defaults, JSON/CSV exports and exit codes are preserved; top-level help advertises the canonical names.
+`codex-time` without arguments also opens the picker. `daemon` and `import-history` retain their existing behavior. Existing scripts can keep using the silent aliases `burn` → `allowance`, `models` → `model-time`, `day` → `projects`, `list` → `sessions`, `report` → `history`, and `status` → `health`. Their existing arguments, defaults, report fields and exit codes are preserved; overview/projects JSON adds token and pricing fields; top-level help advertises the canonical names.
 
 Global options precede the subcommand: `--codex-home`, `--data-dir`, `--state-dir`, `--socket`, and `--timezone`. The `sessions` and `history` commands select the current directory and unarchived sessions by default; directory reports count only intervals attributed to that directory, including a session that has since resumed elsewhere. Date endpoints are inclusive. `--timezone` changes display/report dates; native record directories always use America/Toronto.
 
 ### Combined allowance and model work
 
-Start with a single report for today, or choose a calendar week or month:
+Start with a single report for today, or choose a calendar week, month or all recorded history:
 
 ```bash
 codex-time overview
 codex-time overview week --date 2026-10-06
 codex-time overview month --details
+codex-time overview all
 codex-time overview --plain
 codex-time overview --json
 codex-time --timezone America/Toronto overview day --date 2026-10-06
 codex-time overview week --window-minutes 10080 --limit-id codex --max-gap-seconds 600
 ```
 
-The report shows a readable date/timezone and recorded working duration, followed by allowance balance, observed consumption and ranked model totals. Reasoning rows sit beneath each model. Model and reasoning shares use **all recorded work in the selected period**, including Unknown attribution; each model's session count is the distinct union of its contributing sessions. Reasoning-row session counts can overlap and must not be added together.
+The report shows a readable date/timezone and recorded working duration, followed by token totals and estimated API costs by model, allowance balance, observed consumption and ranked model working-time totals. Reasoning rows sit beneath each model. Model and reasoning shares use **all recorded work in the selected period**, including Unknown attribution; each model's session count is the distinct union of its contributing sessions. Reasoning-row session counts can overlap and must not be added together.
 
 Allowance rates use **only work matched to qualifying allowance readings**. The report shows matched percentage points and duration, excluded consumption, and a short confidence warning; the matched duration can differ from the recorded-work total. Missing readings stay explicit, and separate reset cohorts retain their own readable date/reset labels. Model shares describe work, including tools and delegation, rather than each model's quota cost.
 
 `overview` uses all directories and archive states. Use `projects`, `model-time`, `sessions` or `history` for filtered reports. `--date YYYY-MM-DD` selects the containing period, weeks start Monday, and the selected global `--timezone` defines boundaries. Allowance defaults are the `codex` limit, its 10,080-minute weekly window and a maximum 600-second observation gap.
 
-`--details` reveals technical flags, uncertainty, matched model mixes and diagnostics. `--plain` is ASCII without color; `--color auto|always|never` respects `NO_COLOR`, and automatic output omits color when piped. `--json` emits a clean object with `allowance`, `model_totals` and `reasoning`, each containing the full existing report schema. Overview has no CSV export; the dedicated reports retain their existing JSON/CSV contracts. All sections use one loaded ledger snapshot, and report commands leave recorded data unchanged.
+`--details` reveals technical flags, uncertainty, matched model mixes and diagnostics. `--plain` is ASCII without color; `--color auto|always|never` respects `NO_COLOR`, and automatic output omits color when piped. `--json` emits a clean object with `token_usage`, `allowance`, `model_totals` and `reasoning`, each containing the full existing report schema. Overview has no CSV export; the dedicated reports retain their existing JSON/CSV contracts. The token section exports exact integer categories, Decimal USD/CAD strings, coverage, hierarchy, the versioned price catalog and one cached FX snapshot. All sections use one loaded ledger snapshot, and report commands leave recorded data unchanged.
 
 ### Daily repo and session time
 
@@ -214,6 +216,26 @@ systemctl --user start codex-time.service
 
 Repeating import or restarting cannot add duplicate turns or records. Session identity survives renames and resumes; per-turn cwd stays with the original work. Concurrent root-session totals may exceed elapsed clock time. Child agents appear as excluded and contribute no additional totals.
 
+### Token costs, currencies and history
+
+`cto` already runs `codex-time overview`; its report now includes token usage. Use `codex-time projects week`, `projects month` or `projects all` for directory → root session → actual model totals. Both commands default to today, use the selected timezone and Monday weeks, and reject `all --date`. All-time overview shows the latest recorded allowance snapshot without an all-time consumption rate.
+
+```bash
+codex-time projects all --plain
+codex-time projects week --date 2026-10-06 --cwd /absolute/project --archive all
+codex-time projects month --session SESSION_ID --details
+codex-time overview all --json
+./scripts/token-smoke.py --scenario verify
+```
+
+Replace `SESSION_ID` and `/absolute/project` with real values. Directory filters use each observation's recorded cwd; root-session filters include descendants. Selecting a child ID selects its own observations. Archive filtering follows the root, with orphan children kept visible. Child tokens add consumption once; child elapsed time adds no extra work. Unfinished sessions with tokens remain visible even with zero recorded duration.
+
+Amounts are labelled **Estimated API token cost — Standard**. The bundled [versioned catalog](src/codex_time/pricing-v1.json) records exact model IDs, official source URLs and verification dates (October 8, 2026). One present-rate card applies to all selected history; this is not invoice reconstruction. Cached input and cache writes are input subsets, reasoning is already in output, and long-context tiers require proven request input size. The exact internal model `codex-auto-review` is excluded from token/cost totals and model breakdowns; its stored evidence and working-time accounting are retained. Other unknown models, missing billing evidence and counters after uncertain resets remain explicit. Incomplete coverage shows a **known priced subtotal**, with unpriced tokens and diagnostic reasons under `--details`. Tool fees, hosting, taxes, regional uplifts and other non-token charges are excluded.
+
+CAD uses one cached Bank of Canada USD→CAD observation for the entire report. The daemon checks asynchronously with bounded timeouts, waits at least one hour after an attempt and 24 hours after a successful check, and retains the last valid rate on failure. Reports show the observation date and age. Without a valid rate, USD remains available and CAD is unavailable. Report commands never fetch rates or write data; slow report reads emit periodic elapsed-time status on stderr, keeping JSON stdout clean.
+
+The v4 ledger keeps content-free usage in `usage-observations.jsonl`. The next daemon start ignores v3 rollout offsets and backfills available historical tokens; repeated imports do not add duplicates. Progress goes to stderr/service logs. Preserve a full data-directory and runtime-state backup before upgrading, then use the normal `./scripts/setup.sh` package refresh; custom installations must pass their existing path/socket options. Read [migration and rollback details](docs/token-cost-reporting.md) before restoring older data or executables. The isolated smoke script accepts `--executable PATH` and `--scenario verify|normal|narrow|overview|filtered|json|missing`; it creates temporary synthetic history, never touches personal records, and uses no network.
+
 ### Allowance balance and consumption
 
 The observer automatically saves allowance readings from available rollout history and subsequent events. Inspect account-wide consumption alongside the root workload that was active between readings:
@@ -255,7 +277,7 @@ These values describe evidence rather than exact human-attention measurements:
 
 Historical approval waits may make completed totals too large. Polling can miss waits shorter than its sampling interval, and large imports/slow I/O can increase gaps. Unknown or stale unfinished turns never accumulate indefinitely. Later terminal events can replace incomplete observed coverage with an explicitly uncertain lifecycle upper bound, so totals can increase after recovery. Quality flags remain visible in the list, details, reports and ledger. No total is advertised as exact.
 
-Diagnostics omit payload bodies. Malformed complete JSONL lines are skipped visibly, partial final writes wait for completion, archive moves keep identity, and unsupported database schemas retain usable rollout evidence. A corrupt durable ledger or quota journal blocks writes; restore a valid backup after stopping the service. Version 1 and 2 ledgers upgrade automatically to version 3 while preserving recorded timing/waits and model evidence; old ingestion offsets are invalidated once so available history backfills model metadata and numeric allowance readings. Missing source files retain recorded work and saved model/quota evidence; work without model evidence stays Unknown. Later scans remain incremental. Runtime caches are disposable; a ledger fingerprint invalidates stale offsets after a Git restore. Restart rebuilds native projections from the valid ledger.
+Diagnostics omit payload bodies. Malformed complete JSONL lines are skipped visibly, partial final writes wait for completion, archive moves keep identity, and unsupported database schemas retain usable rollout evidence. A corrupt durable ledger or quota/usage journal blocks writes; restore a valid backup after stopping the service. Version 1, 2 and 3 ledgers upgrade automatically to version 4 while preserving recorded timing/waits and model evidence; old ingestion offsets are invalidated once so available history backfills model metadata, numeric allowance readings and token evidence. Missing source files retain recorded work and saved model/quota evidence; work without model evidence stays Unknown. Later scans remain incremental. Runtime caches are disposable; a ledger fingerprint invalidates stale offsets after a Git restore. Restart rebuilds native projections from the valid ledger.
 
 Integration is verified with installed Codex 0.160.1 schemas. Codex storage is internal and may change. The socket adapter uses [documented app-server initialization and thread lookup](https://learn.chatgpt.com/docs/app-server); it restricts itself to initialize, initialized, thread/loaded/list and thread/read with includeTurns=false. It sends no approval responses.
 
@@ -275,7 +297,7 @@ Closed segments use RFC3339 timestamps and native `start`, `end`, `project:{key}
 
 Checkpoints and heartbeat live under `$XDG_STATE_HOME/codex-time/<data-root-hash>` (default `~/.local/state`). A per-data-root writer lock lives under `~/.local/state/codex-time/locks`. Atomic durable writes stage beside the data root; runtime staging stays in runtime storage. None of these files belongs in the data repository. Model attribution stores only model IDs, reasoning levels, timestamps and provenance. Allowance tracking stores only allowlisted usage/window/reset numbers, timestamps, limit/plan labels and source identity/provenance; raw quota payloads are omitted. No conversation bodies, answers, tool output, auth data or credentials are persisted. Explicit session names and directory paths remain personal metadata; review them before sharing.
 
-Use a separate Git repository inside the data root. Stop the daemon for a consistent snapshot, review `ledger.json`, `quota-observations.jsonl`, `projects/` and `records/`, then commit with your own workflow and restart. Git restore/pull also requires stopping the service first and restoring the ledger and quota journal together. Never merge JSON ledgers mechanically while tracking is running. The app does not initialize repositories, commit, push or synchronize code or data.
+Use a separate Git repository inside the data root. Stop the daemon for a consistent snapshot, review `ledger.json`, `quota-observations.jsonl`, `usage-observations.jsonl`, `projects/` and `records/`, then commit with your own workflow and restart. Git restore/pull also requires stopping the service first and restoring the ledger and both journals together. Never merge JSON ledgers mechanically while tracking is running. The app does not initialize repositories, commit, push or synchronize code or data.
 
 Native timetrace **list/report readers** are compatible with an explicitly configured separate store. Native list displays project keys and minute labels even when distinct records occur within a minute. Minute-key editing/deleting and native single-timer start/stop commands are unsupported for tracker data: they cannot address its unique filenames and can conflict with projections. [Native storage source](https://github.com/dominikbraun/timetrace/blob/v0.14.3/fs/fs.go) documents reader behavior. The reusable compatibility check runs only in a disposable HOME and config, never against your existing records.
 

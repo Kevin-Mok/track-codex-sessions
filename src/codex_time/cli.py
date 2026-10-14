@@ -14,11 +14,13 @@ from codex_time.burn import burn_report
 from codex_time.burn_output import burn_csv, burn_table
 from codex_time.daemon import import_history, observations, run_daemon, runtime_status
 from codex_time.day_output import day_table
+from codex_time.fx import read_fx
 from codex_time.model_output import model_csv, model_table
 from codex_time.model_usage import model_report
 from codex_time.overview import overview_report
 from codex_time.overview_output import overview_table
 from codex_time.presentation import build_rows, duration, run_ui
+from codex_time.progress import report_progress
 from codex_time.reporting import daily_report, report
 from codex_time.storage import Store, StoreError
 
@@ -75,8 +77,11 @@ def parser() -> argparse.ArgumentParser:
             command.add_argument("--session")
             command.add_argument("--from", dest="start", type=date.fromisoformat)
             command.add_argument("--to", dest="end", type=date.fromisoformat)
-    day = sub.add_parser("projects", help="show daily directory totals and session durations")
+    day = sub.add_parser(
+        "projects", help="show directory/session working time, tokens and API costs"
+    )
     canonical["projects"] = day
+    day.add_argument("period", nargs="?", choices=["day", "week", "month", "all"], default="day")
     day.add_argument("--date", type=date.fromisoformat, dest="selected_date")
     day.add_argument("--cwd", help="count only intervals in this directory")
     day.add_argument("--archive", choices=["active", "archived", "all"], default="all")
@@ -128,7 +133,9 @@ def parser() -> argparse.ArgumentParser:
         exports.add_argument("--json", action="store_true")
         exports.add_argument("--csv", action="store_true")
     overview = sub.add_parser("overview", help="combine allowance and complete model working time")
-    overview.add_argument("period", nargs="?", choices=["day", "week", "month"], default="day")
+    overview.add_argument(
+        "period", nargs="?", choices=["day", "week", "month", "all"], default="day"
+    )
     overview.add_argument("--date", type=date.fromisoformat, dest="selected_date")
     overview.add_argument("--window-minutes", type=int, default=10080)
     overview.add_argument("--limit-id", default="codex")
@@ -195,58 +202,63 @@ def main() -> int:
                     json.dumps({k: data[k] for k in ("days", "directories", "sessions")}, indent=2)
                 )
         elif command == "projects":
-            daily_data = daily_report(
-                store.load(),
-                selected_date=args.selected_date,
-                cwd=args.cwd,
-                archive=args.archive,
-                session_id=args.session,
-                timezone_name=args.timezone,
-            )
-            if args.json:
-                print(json.dumps(daily_data, indent=2))
-            else:
-                use_color = args.color == "always" or (
-                    args.color == "auto"
-                    and sys.stdout.isatty()
-                    and os.environ.get("TERM") != "dumb"
+            with report_progress("Reading projects report"):
+                daily_data = daily_report(
+                    store.load(),
+                    period=args.period,
+                    fx=read_fx(store.runtime),
+                    selected_date=args.selected_date,
+                    cwd=args.cwd,
+                    archive=args.archive,
+                    session_id=args.session,
+                    timezone_name=args.timezone,
                 )
-                print(
-                    day_table(
-                        daily_data,
-                        width=shutil.get_terminal_size((88, 24)).columns,
-                        color=use_color,
-                        details=args.details,
-                        plain=args.plain,
+                if args.json:
+                    print(json.dumps(daily_data, indent=2))
+                else:
+                    use_color = args.color == "always" or (
+                        args.color == "auto"
+                        and sys.stdout.isatty()
+                        and os.environ.get("TERM") != "dumb"
                     )
-                )
+                    print(
+                        day_table(
+                            daily_data,
+                            width=shutil.get_terminal_size((88, 24)).columns,
+                            color=use_color,
+                            details=args.details,
+                            plain=args.plain,
+                        )
+                    )
         elif command == "overview":
-            overview_data = overview_report(
-                store.load(),
-                period=args.period,
-                selected_date=args.selected_date,
-                timezone_name=args.timezone,
-                window_minutes=args.window_minutes,
-                limit_id=args.limit_id,
-                max_gap_seconds=args.max_gap_seconds,
-            )
-            if args.json:
-                print(json.dumps(overview_data, indent=2))
-            else:
-                use_color = args.color == "always" or (
-                    args.color == "auto"
-                    and sys.stdout.isatty()
-                    and os.environ.get("TERM") != "dumb"
+            with report_progress("Reading overview report"):
+                overview_data = overview_report(
+                    store.load(),
+                    fx=read_fx(store.runtime),
+                    period=args.period,
+                    selected_date=args.selected_date,
+                    timezone_name=args.timezone,
+                    window_minutes=args.window_minutes,
+                    limit_id=args.limit_id,
+                    max_gap_seconds=args.max_gap_seconds,
                 )
-                print(
-                    overview_table(
-                        overview_data,
-                        width=shutil.get_terminal_size((88, 24)).columns,
-                        color=use_color,
-                        details=args.details,
-                        plain=args.plain,
+                if args.json:
+                    print(json.dumps(overview_data, indent=2))
+                else:
+                    use_color = args.color == "always" or (
+                        args.color == "auto"
+                        and sys.stdout.isatty()
+                        and os.environ.get("TERM") != "dumb"
                     )
-                )
+                    print(
+                        overview_table(
+                            overview_data,
+                            width=shutil.get_terminal_size((88, 24)).columns,
+                            color=use_color,
+                            details=args.details,
+                            plain=args.plain,
+                        )
+                    )
         elif command == "allowance":
             burn_data = burn_report(
                 store.load(),

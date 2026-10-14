@@ -15,7 +15,7 @@ from zoneinfo import ZoneInfo
 from pydantic import ValidationError
 
 from codex_time.accounting import segments
-from codex_time.models import Ledger, QuotaObservation
+from codex_time.models import Ledger, QuotaObservation, UsageObservation
 
 
 class Digest(Protocol):
@@ -82,6 +82,10 @@ class Store:
         self._embedded_quotas: list[QuotaObservation] = []
         self._quota_source: list[QuotaObservation] | None = None
         self._quota_offset = 0
+        self._usage_values: dict[str, UsageObservation] = {}
+        self._embedded_usage: list[UsageObservation] = []
+        self._usage_source: list[UsageObservation] | None = None
+        self._usage_offset = 0
 
     @staticmethod
     def _stat_key(path: Path) -> tuple[int, ...]:
@@ -111,9 +115,13 @@ class Store:
     def fingerprint(self) -> str | None:
         ledger = self._digest(self.root / "ledger.json")
         journal = self._digest(self.root / "quota-observations.jsonl")
-        if journal is None:
+        usage = self._digest(self.root / "usage-observations.jsonl")
+        if journal is None and usage is None:
             return ledger.hexdigest() if ledger is not None else None
-        identity = (ledger.hexdigest() if ledger is not None else "-") + ":" + journal.hexdigest()
+        identity = (ledger.hexdigest() if ledger is not None else "-")
+        identity += ":" + (journal.hexdigest() if journal is not None else "-")
+        if usage is not None:
+            identity += ":" + usage.hexdigest()
         return hashlib.sha256(identity.encode()).hexdigest()
 
     @contextmanager
@@ -173,8 +181,72 @@ class Store:
         self._quota_keys = journal_keys
         self._quota_source = None
         self._quota_offset = 0
+        self._load_usage(ledger)
         self._disk_hash = self.fingerprint()
         return ledger
+
+    def _load_usage(self, ledger: Ledger) -> None:
+        known: dict[str, UsageObservation] = {}
+        journal_values: dict[str, UsageObservation] = {}
+        journal = self.root / "usage-observations.jsonl"
+        _line_number = 0
+        try:
+            for observation in ledger.usage_observations:
+                if observation.id in known and known[observation.id] != observation:
+                    raise ValueError("conflicting embedded usage identity")
+                known[observation.id] = observation
+            self._embedded_usage = list(known.values())
+            if journal.exists():
+                with journal.open("rb") as source:
+                    for _line_number, line in enumerate(source, 1):
+                        if not line.endswith(b"\n"):
+                            raise ValueError("partial final line")
+                        observation = UsageObservation.model_validate_json(line)
+                        if observation.id in known and known[observation.id] != observation:
+                            raise ValueError("conflicting usage identity")
+                        known[observation.id] = observation
+                        journal_values[observation.id] = observation
+        except (OSError, ValueError, ValidationError) as exc:
+            raise StoreError(
+                f"invalid usage-observations.jsonl at line {_line_number}; "
+                "restore a valid backup before writing"
+            ) from exc
+        ledger.usage_observations = list(known.values())
+        self._usage_values = journal_values
+        self._usage_source = None
+        self._usage_offset = 0
+
+    def _append_usage(self, observations: list[UsageObservation]) -> None:
+        pending: dict[str, UsageObservation] = {}
+        for observation in observations:
+            previous = pending.get(observation.id, self._usage_values.get(observation.id))
+            if previous is not None:
+                if previous != observation:
+                    raise StoreError(
+                        "conflicting usage observation identity; refusing to overwrite"
+                    )
+                continue
+            pending[observation.id] = observation
+        if not pending:
+            return
+        path = self.root / "usage-observations.jsonl"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        current = self._digest(path)
+        digest = current.copy() if current is not None else hashlib.sha256()
+        with path.open("ab") as output:
+            for observation in pending.values():
+                line = (observation.model_dump_json() + "\n").encode()
+                output.write(line)
+                digest.update(line)
+            output.flush()
+            os.fsync(output.fileno())
+        directory = os.open(path.parent, os.O_DIRECTORY)
+        try:
+            os.fsync(directory)
+        finally:
+            os.close(directory)
+        self._file_hashes[path] = (self._stat_key(path), digest)
+        self._usage_values.update(pending)
 
     def _append_quotas(self, observations: list[QuotaObservation]) -> None:
         """Append validated new evidence; never rewrite or truncate existing history."""
@@ -217,7 +289,11 @@ class Store:
         # Migrate already durable embedded evidence before removing it from ledger.json.
         self._append_quotas(self._embedded_quotas)
         self._embedded_quotas = []
-        payload = ledger.model_dump(mode="json", exclude={"quota_observations"})
+        self._append_usage(self._embedded_usage)
+        self._embedded_usage = []
+        payload = ledger.model_dump(
+            mode="json", exclude={"quota_observations", "usage_observations"}
+        )
         rendered = json.dumps(payload, sort_keys=True)
         if rendered != self._ledger_json:
             self._write(self.root / "ledger.json", payload)
@@ -229,6 +305,12 @@ class Store:
         self._append_quotas(ledger.quota_observations[offset:])
         self._quota_source = ledger.quota_observations
         self._quota_offset = len(ledger.quota_observations)
+        usage_offset = self._usage_offset if self._usage_source is ledger.usage_observations else 0
+        if usage_offset > len(ledger.usage_observations):
+            usage_offset = 0
+        self._append_usage(ledger.usage_observations[usage_offset:])
+        self._usage_source = ledger.usage_observations
+        self._usage_offset = len(ledger.usage_observations)
         self._disk_hash = self.fingerprint()
         self.project(ledger)
 

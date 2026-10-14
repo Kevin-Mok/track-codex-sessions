@@ -4,13 +4,25 @@ from __future__ import annotations
 
 import hashlib
 import json
+from collections.abc import Callable
 from datetime import UTC, datetime
 from pathlib import Path
+from time import monotonic
 from typing import cast
 
 from pydantic import Field, ValidationError
 
-from codex_time.models import Ledger, Model, ModelContext, QuotaObservation, Session, Span, Turn
+from codex_time.models import (
+    Ledger,
+    Model,
+    ModelContext,
+    QuotaObservation,
+    Session,
+    Span,
+    Turn,
+    UsageObservation,
+)
+from codex_time.token_ingest import UsageState, observe
 
 
 def diagnostic(ledger: Ledger, message: str) -> None:
@@ -63,6 +75,7 @@ class FileState(Model):
     current_turn: str = ""
     contexts: dict[str, list[ModelContext]] = Field(default_factory=dict)
     pending: dict[str, PendingWait] = Field(default_factory=dict)
+    usage: UsageState = Field(default_factory=UsageState)
 
 
 class RolloutReader:
@@ -72,8 +85,23 @@ class RolloutReader:
     Losing checkpoints is safe: re-reading reconstructs the same durable ledger.
     """
 
-    def __init__(self, home: Path, checkpoints: dict[str, object] | None = None) -> None:
+    def __init__(
+        self,
+        home: Path,
+        checkpoints: dict[str, object] | None = None,
+        *,
+        progress: Callable[[str], None] | None = None,
+    ) -> None:
         self.home = home
+        self.progress = progress
+        self._progress_at = 0.0
+        self._scan_started = 0.0
+        self._records = 0
+        self._paths = 0
+        self._usage_ids: set[str] = set()
+        self._usage_ledger: Ledger | None = None
+        self._usage_count = 0
+        self._usage_sessions: dict[str, list[UsageObservation]] = {}
         self._files: dict[str, FileState] = {}
         self._invalid_checkpoint = False
         self._quota_keys: set[str] = set()
@@ -81,7 +109,7 @@ class RolloutReader:
         self._quota_count = 0
         if checkpoints:
             files = checkpoints.get("files", {})
-            if checkpoints.get("version") == 3 and isinstance(files, dict):
+            if checkpoints.get("version") == 4 and isinstance(files, dict):
                 for key, value in files.items():
                     try:
                         self._files[str(key)] = FileState.model_validate(value)
@@ -93,11 +121,21 @@ class RolloutReader:
     @property
     def checkpoints(self) -> dict[str, object]:
         return {
-            "version": 3,
+            "version": 4,
             "files": {key: value.model_dump(mode="json") for key, value in self._files.items()},
         }
 
     def scan(self, ledger: Ledger) -> None:
+        self._scan_started = monotonic()
+        self._records = self._paths = 0
+        if self._usage_ledger is not ledger or self._usage_count != len(ledger.usage_observations):
+            self._usage_ids = {u.id for u in ledger.usage_observations}
+            self._usage_sessions = {}
+            for observation in ledger.usage_observations:
+                self._usage_sessions.setdefault(observation.session_id, []).append(observation)
+            self._usage_ledger = ledger
+            self._usage_count = len(ledger.usage_observations)
+        self._progress(force=True)
         if self._quota_ledger is not ledger or self._quota_count != len(ledger.quota_observations):
             self._quota_keys = {q.model_dump_json() for q in ledger.quota_observations}
             self._quota_ledger = ledger
@@ -108,8 +146,20 @@ class RolloutReader:
         for directory in ("sessions", "archived_sessions"):
             root = self.home / directory
             for path in sorted(root.rglob("*.jsonl")):
+                self._paths += 1
+                self._progress()
                 self._scan_file(path, ledger, archived=directory == "archived_sessions")
         self.reconcile_contexts(ledger)
+        self._progress(force=True)
+
+    def _progress(self, *, force: bool = False) -> None:
+        now = monotonic()
+        if self.progress is not None and (force or now - self._progress_at >= 2):
+            self.progress(
+                f"Reading rollout history: {self._paths:,} files, {self._records:,} records "
+                f"({now - self._scan_started:.0f}s elapsed)"
+            )
+            self._progress_at = now
 
     def reconcile_contexts(self, ledger: Ledger) -> None:
         """Join queued rollout evidence to stable turns supplied by metadata later."""
@@ -143,12 +193,15 @@ class RolloutReader:
                     if not raw.endswith(b"\n"):
                         break
                     state.offset = stream.tell()
+                    self._records += 1
+                    self._progress(force=self._records % 1000 == 0)
                     try:
                         record = json.loads(raw)
                         if not isinstance(record, dict):
                             raise ValueError("expected object")
                         self._event(cast(dict[str, object], record), state, ledger)
                     except (ValueError, TypeError, OverflowError):
+                        state.usage.gap = True
                         diagnostic(ledger, "malformed rollout record skipped")
             session = ledger.sessions.get(state.session_id)
             if session:
@@ -163,6 +216,7 @@ class RolloutReader:
         payload = record.get("payload")
         if not isinstance(payload, dict):
             if kind in ("session_meta", "event_msg", "turn_context", "response_item"):
+                state.usage.gap = True
                 diagnostic(ledger, "unsupported rollout payload schema; record skipped")
             return
         at = timestamp(record.get("timestamp"))
@@ -171,7 +225,11 @@ class RolloutReader:
             if not isinstance(sid, str) or not isinstance(cwd, str):
                 raise ValueError("unsupported session metadata")
             state.session_id, state.cwd = sid, cwd
+            state.usage.created = at
+            state.usage.forked = bool(payload.get("forked_from_id"))
+            state.usage.directories_seen = [cwd]
             parent, child = ancestry(payload)
+            state.usage.child = child
             meta_session = ledger.sessions.setdefault(
                 sid,
                 Session(id=sid, cwd=cwd, created=at, updated=at, parent_id=parent, is_child=child),
@@ -182,6 +240,48 @@ class RolloutReader:
             return
         if kind == "event_msg" and payload.get("type") == "token_count":
             self._quota(payload.get("rate_limits"), at, ledger)
+            if state.session_id:
+                if state.usage.cumulative is None:
+                    # A shortened/replaced rollout can begin after already durable
+                    # evidence. Seed only from earlier observations of this session;
+                    # never treat its later cumulative total as wholly new work.
+                    previous = max(
+                        (
+                            u
+                            for u in self._usage_sessions.get(state.session_id, [])
+                            if u.at < at and u.cumulative is not None
+                        ),
+                        key=lambda u: u.at,
+                        default=None,
+                    )
+                    if previous is not None:
+                        state.usage.cumulative = previous.cumulative
+                        state.usage.model_changed |= previous.model_id != state.usage.model_id
+                        state.usage.cwd_changed |= previous.cwd != state.cwd
+                observation = observe(
+                    payload.get("info"),
+                    session_id=state.session_id,
+                    cwd=state.cwd,
+                    at=at,
+                    state=state.usage,
+                )
+                if observation is not None and observation.id not in self._usage_ids:
+                    if any(
+                        prior.at > observation.at
+                        for prior in self._usage_sessions.get(state.session_id, [])
+                    ):
+                        # A later durable tranche may already contain this restored
+                        # prefix. Keep its evidence but do not charge it again. The
+                        # immutable journal cannot safely redistribute old deltas.
+                        observation.delta = None
+                        observation.request_input_tokens = None
+                        observation.diagnostics.append("earlier_history_overlap")
+                    ledger.usage_observations.append(observation)
+                    self._usage_ids.add(observation.id)
+                    self._usage_sessions.setdefault(observation.session_id, []).append(observation)
+                    self._usage_count += 1
+            else:
+                diagnostic(ledger, "token usage without session metadata; attribution unavailable")
             return
         session = ledger.sessions.get(state.session_id)
         if session is None:
@@ -193,6 +293,11 @@ class RolloutReader:
         if kind == "turn_context":
             cwd = payload.get("cwd")
             if isinstance(cwd, str):
+                state.usage.cwd_known = True
+                if any(old != cwd for old in state.usage.directories_seen):
+                    state.usage.cwd_changed = True
+                if cwd not in state.usage.directories_seen:
+                    state.usage.directories_seen.append(cwd)
                 state.cwd = cwd
                 session.cwd = cwd
                 turn = session.turns.get(tid if isinstance(tid, str) else state.current_turn)
@@ -209,7 +314,14 @@ class RolloutReader:
                 if isinstance(payload.get("effort"), str) and payload.get("effort")
                 else None,
             )
+            if any(old != context.model_id for old in state.usage.models_seen):
+                state.usage.model_changed = True
+            if context.model_id not in state.usage.models_seen:
+                state.usage.models_seen.append(context.model_id)
+            state.usage.model_id = context.model_id
+            state.usage.context_at = at
             context_id = tid if isinstance(tid, str) else state.current_turn
+            state.usage.turn_id = context_id or None
             if not context_id:
                 diagnostic(ledger, "model context without stable turn ID skipped")
             elif context_id in session.turns:
@@ -224,6 +336,7 @@ class RolloutReader:
                 diagnostic(ledger, "task start without stable turn ID skipped")
                 return
             state.current_turn = tid
+            state.usage.turn_id = tid
             if "no_lifecycle_events" in session.quality:
                 session.quality.remove("no_lifecycle_events")
             turn = session.turns.setdefault(tid, Turn(id=tid, cwd=state.cwd, start=at))

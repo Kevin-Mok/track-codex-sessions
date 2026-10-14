@@ -1,6 +1,6 @@
 # Codex Time smoke tests
 
-Verify automatic work accounting, daily repo/session reports, model working-time usage, a combined allowance/model overview, allowance consumption, safe session resume and service recovery. First run the isolated smoke script, then inspect the installed service and perform the normal-session UI/report checks. All commands require no sudo; fixture checks never access existing timetrace records.
+Verify automatic work accounting, daily repo/session reports, model working-time usage, token/API costs in USD/CAD and a combined allowance/model overview, allowance consumption, safe session resume and service recovery. First run the isolated smoke script, then inspect the installed service and perform the normal-session UI/report checks. All commands require no sudo; fixture checks never access existing timetrace records.
 
 ## Automated fixture checks
 
@@ -56,7 +56,7 @@ Verify automatic work accounting, daily repo/session reports, model working-time
 
 **Action:** systemctl --user stop codex-time.service && codex-time import-history && codex-time import-history && systemctl --user start codex-time.service
 
-**Expected:** Comparing a reviewed data-store diff shows no duplicate records or model contexts. Version 1 and 2 ledger timing and wait evidence survive upgrade to version 3; available rollout history backfills model attribution once, and unavailable sources preserve work and saved attribution, with Unknown where evidence is missing. Historical reconciliation may add newly discovered waits or replace marked SQLite estimates with precise rollout times; prior evidence remains covered. Durable data contains only ledger/quota journal/projects/records; checkpoint/lock/staging files stay outside that repository; the content-free quota journal belongs with the ledger in durable snapshots. Existing ~/.timetrace is unaffected. Never run native editing/start/stop commands against tracker data.
+**Expected:** Comparing a reviewed data-store diff shows no duplicate records or model contexts. Version 1, 2 and 3 ledger timing and wait evidence survive upgrade to version 4; available rollout history backfills model attribution once, and unavailable sources preserve work and saved attribution, with Unknown where evidence is missing. Historical reconciliation may add newly discovered waits or replace marked SQLite estimates with precise rollout times; prior evidence remains covered. Durable data contains only ledger/quota and usage journals/projects/records; checkpoint/lock/staging files stay outside that repository; both content-free journals belong with the ledger in durable snapshots. Existing ~/.timetrace is unaffected. Never run native editing/start/stop commands against tracker data.
 
 **Action:** ./scripts/uninstall.sh
 
@@ -66,7 +66,7 @@ Verify automatic work accounting, daily repo/session reports, model working-time
 
 **Action:** codex-time overview
 
-**Expected:** Today's readable date/timezone and recorded duration appear first, then allowance balance, observed consumption and model work. Model totals rank by duration, with reasoning rows directly beneath their model. Model and reasoning percentages share the overall recorded-work denominator. Model session counts independently count distinct contributing sessions; they do not sum reasoning-row counts. All directories and archive states contribute. Unknown model/reasoning remains visible, and unknown models are unranked. Missing readings give an explicit evidence warning while recorded model work remains available.
+**Expected:** Today's readable date/timezone and recorded duration appear first, then tokens and estimated Standard API costs, allowance balance, observed consumption and model work. Model totals rank by duration, with reasoning rows directly beneath their model. Model and reasoning percentages share the overall recorded-work denominator. Model session counts independently count distinct contributing sessions; they do not sum reasoning-row counts. All directories and archive states contribute. Unknown model/reasoning remains visible, and unknown models are unranked. Missing readings give an explicit evidence warning while recorded model work remains available.
 
 **Action:** codex-time overview week --date 2026-10-06 --details
 
@@ -191,3 +191,41 @@ Implementation verification and exact fresh counts are maintained in [the base E
 **Action:** Follow the README clone instructions in a fresh directory, then run `uv sync --python 3.12`, `uv run codex-time --help`, and `./scripts/smoke-test.sh`. Run setup only when you intend to install and enable the user service.
 
 **Expected:** The public checkout has source, tests, scripts and matching implementation plans; help and isolated smoke checks work without personal ledgers or allowance-history artifacts. Setup is a separate deliberate installation step. Virtual environments, build output and local usage records are absent from Git history.
+
+## Token usage and estimated API costs
+
+Run these from the repository root without sudo after package refresh. `token-smoke.py` uses the installed CLI by default; use `--executable .venv/bin/codex-time` for source verification. Its values are synthetic expected examples, not personal usage.
+
+**Action:** ./scripts/token-smoke.py --scenario verify
+
+**Expected:** `Token smoke passed: 1,320,000 tokens; USD 2.91; CAD 3.9285 at 1.35.` The next line confirms periods, child attribution, auto-review exclusion, replay and read-only reports. All-time/day/week/month and legacy day exports reconcile, repeated import preserves totals, and report reads leave data/runtime hashes unchanged.
+
+**Action:** ./scripts/token-smoke.py --scenario normal
+
+**Expected:** Day total `1m 0s`; `1.32M tokens | USD 2.91 / CAD 3.93`; both directory rows keep `smoke-root` as the root-session ID, and `gpt-4.1` appears beneath session rows. Child-directory time is zero. The synthetic `codex-auto-review` child is excluded from token/cost totals and model rows, with an explicit exclusion note. The synthetic FX observation date is October 6, 2026; age varies with the current date.
+
+**Action:** ./scripts/token-smoke.py --scenario narrow
+
+**Expected:** A 32-column ASCII layout wraps directory/session/model, token and USD/CAD values without hiding them or emitting color escapes.
+
+**Action:** ./scripts/token-smoke.py --scenario overview
+
+**Expected:** `All recorded history`, `Estimated API token cost - Standard`, the model token subtotal and `Latest allowance snapshot`. No all-time consumption rate appears; this fixture has no allowance readings.
+
+**Action:** ./scripts/token-smoke.py --scenario filtered
+
+**Expected:** Only `/fixture/subagent` contributes: `220k tokens`, `USD 0.48 / CAD 0.65`, root ID `smoke-root`, and `0s` additional work. Week selection, exact cwd, root-session and archive filters remain available.
+
+**Action:** ./scripts/token-smoke.py --scenario json
+
+**Expected:** Clean JSON contains `token_usage.usage.tokens.total_tokens: 1320000`, exact USD/CAD strings numerically equal to `2.91`/`3.9285`, typed coverage, model hierarchy, dated pricing and FX metadata. Decimal strings may retain trailing zeros.
+
+**Action:** ./scripts/token-smoke.py --scenario missing
+
+**Expected:** The internal model remains visible with `1.32M tokens`, `USD unpriced`, `CAD unavailable`, and a `Known priced subtotal` warning. No guessed model alias or exchange rate is used.
+
+**Action:** codex-time projects all --date 2026-10-06
+
+**Expected:** Exit status 2 and `--date cannot be combined with all`; reports never start a network request or modify stored data.
+
+Migration, billing limits, conservative restored-prefix behavior and rollback are documented in [the token-cost guide](token-cost-reporting.md); exact execution evidence is maintained in [the token-cost plan](../plans/codex-token-cost-reporting.md).

@@ -19,3 +19,8 @@ Keep local tracker changes grounded in lifecycle and read-only runtime evidence.
 - Share percentage labels must use the same formatter in table and stacked layouts; a positive tiny share must not become zero only because terminal width or model-name length changes.
 
 - Wrap cohort labels with Rich Text instead of Rule titles: narrow Rule titles may truncate reset evidence and insert a Unicode ellipsis even in ASCII output.
+
+- Detect missing token evidence per actual session and recorded directory before grouping descendants under roots; child tokens cannot make missing parent usage complete, and missing child evidence must not add elapsed time.
+- In an immutable cumulative-usage journal, newly restored earlier observations may already belong to a counted later tranche. Retain overlap uncertainty instead of charging the prefix again.
+- Select an all-time allowance snapshot from eligible quota observation dates, independently of later session or token activity.
+- Treat unsupported context payload schemas as attribution gaps, just like malformed records, so skipped evidence cannot silently reuse an old model or directory.

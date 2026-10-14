@@ -111,18 +111,53 @@ class QuotaObservation(Model):
         return value.astimezone(UTC)
 
 
+class TokenCounts(Model):
+    """Exact token categories; absence is different from a measured zero."""
+
+    input_tokens: int | None = Field(default=None, ge=0, strict=True)
+    cached_input_tokens: int | None = Field(default=None, ge=0, strict=True)
+    cache_write_input_tokens: int | None = Field(default=None, ge=0, strict=True)
+    output_tokens: int | None = Field(default=None, ge=0, strict=True)
+    reasoning_output_tokens: int | None = Field(default=None, ge=0, strict=True)
+    total_tokens: int | None = Field(default=None, ge=0, strict=True)
+
+
+class UsageObservation(Model):
+    """Whitelisted rollout evidence and its conservative, replayable increment."""
+
+    id: str = Field(min_length=1)
+    session_id: str = Field(min_length=1)
+    at: datetime
+    cwd: str | None = None
+    model_id: str | None = None
+    turn_id: str | None = None
+    cumulative: TokenCounts | None = None
+    last_usage: TokenCounts | None = None
+    delta: TokenCounts | None = None
+    request_input_tokens: int | None = Field(default=None, ge=0, strict=True)
+    diagnostics: list[str] = Field(default_factory=list)
+
+    @field_validator("at")
+    @classmethod
+    def aware(cls, value: datetime) -> datetime:
+        if value.tzinfo is None:
+            raise ValueError("usage observation requires timezone")
+        return value.astimezone(UTC)
+
+
 class Ledger(Model):
-    version: Literal[3] = 3
+    version: Literal[4] = 4
 
     @model_validator(mode="before")
     @classmethod
     def upgrade(cls, value: object) -> object:
-        if isinstance(value, dict) and value.get("version") in (1, 2):
-            return {**value, "version": 3}
+        if isinstance(value, dict) and value.get("version") in (1, 2, 3):
+            return {**value, "version": 4}
         return value
 
     sessions: dict[str, Session] = Field(default_factory=dict)
     quota_observations: list[QuotaObservation] = Field(default_factory=list)
+    usage_observations: list[UsageObservation] = Field(default_factory=list)
     diagnostics: list[str] = Field(default_factory=list)
 
 

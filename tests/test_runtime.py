@@ -13,6 +13,7 @@ from pathlib import Path
 from websockets.asyncio.server import ServerConnection, unix_serve
 
 from codex_time.accounting import segments, total_seconds
+from codex_time.fx import FXSnapshot
 from codex_time.storage import Store
 
 
@@ -44,6 +45,10 @@ async def test_daemon_survives_ui_exit_restart_and_stale_checkpoint(tmp_path: Pa
         + line("turn_context", {"turn_id": "turn", "model": "fixture-model", "effort": "high"})
     )
     store = Store(tmp_path / "data", tmp_path / "state")
+    store.runtime.mkdir(parents=True)
+    (store.runtime / "fx-usd-cad.json").write_text(
+        FXSnapshot(last_success=datetime.now(UTC)).model_dump_json()
+    )
     socket_path = tmp_path / "observer.sock"
     state = "working"
     calls = []

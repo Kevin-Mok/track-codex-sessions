@@ -1,7 +1,7 @@
 """Historical model projections over the existing counted working-time intervals."""
 
 from dataclasses import dataclass, field
-from datetime import UTC, date, datetime, timedelta
+from datetime import UTC, date, datetime
 from itertools import groupby
 from pathlib import Path
 from typing import TypedDict
@@ -9,6 +9,8 @@ from zoneinfo import ZoneInfo
 
 from codex_time.accounting import daily_microseconds, segments
 from codex_time.models import AttributedSegment, Ledger, Session, Turn, WorkSegment
+from codex_time.periods import calendar_dates as calendar_dates
+from codex_time.periods import report_dates
 from codex_time.reporting import selected_sessions
 
 
@@ -118,19 +120,6 @@ def attributed_segments(
     return result
 
 
-def calendar_dates(period: str, selected: date) -> tuple[date, date]:
-    if period == "day":
-        return selected, selected
-    if period == "week":
-        start = selected - timedelta(days=selected.weekday())
-        return start, start + timedelta(days=6)
-    if period == "month":
-        start = selected.replace(day=1)
-        following = date(start.year + (start.month == 12), start.month % 12 + 1, 1)
-        return start, following - timedelta(days=1)
-    raise ValueError("model report period must be day, week or month")
-
-
 @dataclass
 class Bucket:
     micros: int = 0
@@ -151,9 +140,15 @@ def model_report(
     now: datetime | None = None,
 ) -> ModelUsageReport:
     selected_date = (
-        selected_date or (now or datetime.now(UTC)).astimezone(ZoneInfo(timezone_name)).date()
+        (
+            None
+            if period == "all"
+            else (now or datetime.now(UTC)).astimezone(ZoneInfo(timezone_name)).date()
+        )
+        if selected_date is None
+        else selected_date
     )
-    start, end = calendar_dates(period, selected_date)
+    start, end = report_dates(ledger, period, selected_date, timezone_name)
     buckets: dict[tuple[str | None, str | None], Bucket] = {}
     for session in selected_sessions(
         ledger, cwd=cwd or "/", all_directories=cwd is None, archive=archive

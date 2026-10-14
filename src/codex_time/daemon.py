@@ -3,12 +3,15 @@
 import asyncio
 import os
 import signal
+import sys
+from contextlib import suppress
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import cast
 
 from pydantic import ValidationError
 
+from codex_time.fx import FXSnapshot, read_fx, refresh_due, refresh_fx
 from codex_time.ingest import RolloutReader, diagnostic
 from codex_time.live import LiveClient
 from codex_time.metadata import refresh_metadata
@@ -55,7 +58,10 @@ def runtime_status(store: Store) -> dict[str, object]:
 def import_history(store: Store, home: Path) -> Ledger:
     with store.writer():
         ledger = store.load()
-        reader = RolloutReader(home)  # Force full idempotent reconciliation.
+        reader = RolloutReader(
+            home, progress=lambda message: print(message, file=sys.stderr, flush=True)
+        )
+        # Force full idempotent reconciliation.
         reader.scan(ledger)
         refresh_metadata(home, ledger)
         reader.reconcile_contexts(ledger)
@@ -79,14 +85,37 @@ async def run_daemon(
         )
         # A checkpoint is valid only with the durable ledger that preceded it.
         reader = RolloutReader(
-            home, cast(dict[str, object], cached) if isinstance(cached, dict) else None
+            home,
+            cast(dict[str, object], cached) if isinstance(cached, dict) else None,
+            progress=lambda message: print(message, file=sys.stderr, flush=True),
         )
         observer = Observer()
         client = LiveClient(home, socket_path)
         iteration = 0
+        fx_state = read_fx(store.runtime)
+        fx_task: asyncio.Task[FXSnapshot] | None = None
         try:
             while not stop.is_set():
                 began = loop.time()
+                if fx_task is not None and fx_task.done():
+                    try:
+                        fx_state = fx_task.result()
+                    except OSError:
+                        diagnostic(
+                            ledger, "FX cache unavailable; tracking continues; retry in one hour"
+                        )
+                    fx_task = None
+                if fx_task is None and refresh_due(fx_state):
+                    # Local attempt timestamp also throttles a cache-write failure.
+                    fx_state = fx_state.model_copy(update={"last_attempt": datetime.now(UTC)})
+                    fx_task = asyncio.create_task(refresh_fx(store.runtime))
+                # Backfills report progress; short steady-state scans stay quiet.
+                scan_started = loop.time()
+                reader.progress = lambda message, iteration=iteration, scan_started=scan_started: (
+                    print(message, file=sys.stderr, flush=True)
+                    if iteration == 0 or loop.time() - scan_started >= 2
+                    else None
+                )
                 reader.scan(ledger)
                 if iteration % 10 == 0:
                     refresh_metadata(home, ledger)
@@ -128,6 +157,10 @@ async def run_daemon(
                 except TimeoutError:
                     pass
         finally:
+            if fx_task is not None:
+                fx_task.cancel()
+                with suppress(asyncio.CancelledError, OSError):
+                    await fx_task
             await client.close()
             raw = store.runtime_read()
             raw["heartbeat"] = None

@@ -108,7 +108,7 @@ def test_legacy_ledger_backfill_invalidates_old_offsets_preserves_timing(tmp_pat
     store.root.mkdir()
     (store.root / "ledger.json").write_text(json.dumps(original))
     ledger = store.load()
-    assert ledger.version == 3
+    assert ledger.version == 4
     stat = path.stat()
     old = {
         "version": 1,
@@ -126,7 +126,7 @@ def test_legacy_ledger_backfill_invalidates_old_offsets_preserves_timing(tmp_pat
     assert recovered.waits == turn.waits and recovered.coverage == turn.coverage
     assert recovered.start == turn.start and recovered.end == turn.end
     assert recovered.model_contexts[0].model_id == "A"
-    assert reader.checkpoints["version"] == 3
+    assert reader.checkpoints["version"] == 4
     before = ledger.model_dump_json()
     RolloutReader(home, reader.checkpoints).scan(ledger)
     assert ledger.model_dump_json() == before

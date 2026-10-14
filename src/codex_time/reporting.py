@@ -2,11 +2,20 @@
 
 from datetime import date, datetime
 from pathlib import Path
-from typing import TypedDict
+from typing import NotRequired, TypedDict
 from zoneinfo import ZoneInfo
 
 from codex_time.accounting import daily_microseconds, segments
+from codex_time.fx import FXSnapshot
 from codex_time.models import Ledger, Session
+from codex_time.periods import report_dates
+from codex_time.pricing import PricingCatalog
+from codex_time.token_reporting import (
+    ChildContribution,
+    TokenModelRow,
+    UsageSummary,
+    token_report,
+)
 
 
 class Report(TypedDict):
@@ -87,6 +96,9 @@ def report(
 
 
 class SessionTime(TypedDict):
+    usage: NotRequired[UsageSummary]
+    models: NotRequired[list[TokenModelRow]]
+    children: NotRequired[list[ChildContribution]]
     id: str
     title: str
     total_seconds: float
@@ -95,6 +107,8 @@ class SessionTime(TypedDict):
 
 
 class DirectoryTime(TypedDict):
+    usage: NotRequired[UsageSummary]
+    models: NotRequired[list[TokenModelRow]]
     cwd: str
     total_seconds: float
     total_microseconds: int
@@ -103,7 +117,16 @@ class DirectoryTime(TypedDict):
     quality: list[str]
 
 
-class DailyReport(TypedDict):
+PeriodFields = TypedDict("PeriodFields", {"from": NotRequired[str], "to": NotRequired[str]})
+
+
+class DailyReport(PeriodFields):
+    excluded_models: NotRequired[list[str]]
+    period: NotRequired[str]
+    usage: NotRequired[UsageSummary]
+    models: NotRequired[list[TokenModelRow]]
+    pricing: NotRequired[dict[str, object]]
+    fx: NotRequired[dict[str, object]]
     date: str
     timezone: str
     total_seconds: float
@@ -117,6 +140,9 @@ def daily_report(
     ledger: Ledger,
     *,
     selected_date: date | None = None,
+    period: str = "day",
+    fx: FXSnapshot | None = None,
+    catalog: PricingCatalog | None = None,
     cwd: str | None = None,
     archive: str = "all",
     session_id: str | None = None,
@@ -124,7 +150,11 @@ def daily_report(
 ) -> DailyReport:
     """Project one local day's work into directory/session groups without writes."""
     zone = ZoneInfo(timezone_name)
-    day = (selected_date or datetime.now(zone).date()).isoformat()
+    if period == "all" and selected_date is not None:
+        raise ValueError("--date cannot be combined with all")
+    selected = selected_date or datetime.now(zone).date()
+    first, last = report_dates(ledger, period, None if period == "all" else selected, timezone_name)
+    day = selected.isoformat()
     counted: dict[str, dict[str, SessionTime]] = {}
     directory_filter = Path(cwd).resolve() if cwd is not None else None
     for session in selected_sessions(
@@ -139,7 +169,11 @@ def daily_report(
         for span in segments(list(session.turns.values())):
             if directory_filter is not None and Path(span.cwd).resolve() != directory_filter:
                 continue
-            micros = daily_microseconds([span], timezone_name).get(day, 0)
+            micros = sum(
+                value
+                for day_key, value in daily_microseconds([span], timezone_name).items()
+                if first.isoformat() <= day_key <= last.isoformat()
+            )
             if not micros:
                 continue
             rows = counted.setdefault(span.cwd, {})
@@ -154,6 +188,36 @@ def daily_report(
             row = rows[session.id]
             row["total_microseconds"] += micros
             row["quality"] = sorted(set(row["quality"]) | set(span.quality))
+    tokens = token_report(
+        ledger,
+        period=period,
+        selected_date=None if period == "all" else selected,
+        timezone_name=timezone_name,
+        cwd=cwd,
+        archive=archive,
+        session_id=session_id,
+        fx=fx,
+        catalog=catalog,
+    )
+    token_directories = {d["cwd"]: d for d in tokens["directories"]}
+    for token_directory in tokens["directories"]:
+        rows = counted.setdefault(token_directory["cwd"], {})
+        for token_session in token_directory["sessions"]:
+            sid = token_session["id"]
+            owner = ledger.sessions.get(sid)
+            row = rows.setdefault(
+                sid,
+                {
+                    "id": sid,
+                    "title": owner.title if owner else "",
+                    "total_seconds": 0,
+                    "total_microseconds": 0,
+                    "quality": list(owner.quality) if owner else [],
+                },
+            )
+            row["usage"] = token_session["usage"]
+            row["models"] = token_session["models"]
+            row["children"] = token_session["children"]
     total = sum(row["total_microseconds"] for rows in counted.values() for row in rows.values())
     directories: list[DirectoryTime] = []
     for directory, rows in counted.items():
@@ -166,7 +230,9 @@ def daily_report(
                 "cwd": directory,
                 "total_seconds": micros / 1_000_000,
                 "total_microseconds": micros,
-                "share_percent": micros * 100 / total,
+                "share_percent": micros * 100 / total if total else 0,
+                "usage": token_directories[directory]["usage"],
+                "models": token_directories[directory]["models"],
                 "sessions": sessions,
                 "quality": sorted({q for row in sessions for q in row["quality"]}),
             }
@@ -174,6 +240,14 @@ def daily_report(
     directories.sort(key=lambda row: (-row["total_microseconds"], row["cwd"]))
     return {
         "date": day,
+        "period": period,
+        "from": first.isoformat(),
+        "to": last.isoformat(),
+        "usage": tokens["usage"],
+        "excluded_models": tokens["excluded_models"],
+        "models": tokens["models"],
+        "pricing": tokens["pricing"],
+        "fx": tokens["fx"],
         "timezone": timezone_name,
         "total_seconds": total / 1_000_000,
         "total_microseconds": total,

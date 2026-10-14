@@ -11,6 +11,7 @@ from rich.text import Text
 
 from codex_time.presentation import safe_text
 from codex_time.reporting import DailyReport
+from codex_time.token_output import provenance, usage_details, usage_line, usage_warning
 
 
 def _working_duration(microseconds: int) -> str:
@@ -64,12 +65,26 @@ def day_table(
     selected = date.fromisoformat(data["date"])
     say()
     say(icon("🕒") + "Codex daily work", "bold")
-    say(f"{selected:%a, %b} {selected.day}, {selected.year}", "dim")
+    if data.get("period") == "all":
+        say("All recorded history", "dim")
+    elif data.get("period", "day") != "day":
+        say(f"{data.get('from')} - {data.get('to')}", "dim")
+    else:
+        say(f"{selected:%a, %b} {selected.day}, {selected.year}", "dim")
     say(data["timezone"], "dim")
     say()
-    say("Day total", "bold")
+    say("Day total" if data.get("period", "day") == "day" else "Period total", "bold")
     say(_working_duration(data["total_microseconds"]), "bold green")
     flags(data["quality"])
+    if "usage" in data:
+        say("Estimated API token cost " + ("-" if plain else "—") + " Standard", "bold")
+        say(usage_line(data["usage"]), "bold")
+        usage_warning(say, data["usage"])
+        if data.get("excluded_models"):
+            say("Excluded from token/cost totals: " + ", ".join(data["excluded_models"]), "dim")
+        provenance(say, data.get("pricing", {}), data.get("fx", {}))
+        if details:
+            usage_details(say, data["usage"])
     say()
 
     if not data["directories"]:
@@ -87,6 +102,8 @@ def day_table(
             progress.append(f"  {share:5.1f}%")
             console.print(Padding(progress, (0, 0, 0, 2)))
             say("Time: " + _working_duration(directory["total_microseconds"]), indent=2)
+            if "usage" in directory:
+                say(usage_line(directory["usage"]), indent=2)
         say()
         say("Session details", "bold")
         for directory in data["directories"]:
@@ -97,15 +114,40 @@ def day_table(
             say("Time: " + _working_duration(directory["total_microseconds"]), "bold", indent=2)
             say(f"Share: {directory['share_percent']:.1f}%", "dim", indent=2)
             flags(directory["quality"], indent=2)
+            if "usage" in directory:
+                say(usage_line(directory["usage"]), indent=2)
             for session in directory["sessions"]:
                 say(session["title"].strip() or "Untitled session", "bold", indent=2)
                 say("ID: " + session["id"], "dim", indent=4)
                 say("Time: " + _working_duration(session["total_microseconds"]), indent=4)
                 flags(session["quality"], indent=4)
+                if "usage" in session:
+                    say(usage_line(session["usage"]), indent=4)
+                for model in session.get("models", []):
+                    say(model["model_id"] or "Unknown model", "bold", indent=4)
+                    say(usage_line(model["usage"]), indent=6)
+                    if details:
+                        usage_details(
+                            lambda value, style: say(value, style, indent=6), model["usage"]
+                        )
+                if details and "usage" in session:
+                    usage_details(
+                        lambda value, style: say(value, style, indent=4), session["usage"]
+                    )
+                if details and session.get("children"):
+                    say("Child contributions", "bold", indent=4)
+                    for child in session["children"]:
+                        say(
+                            f"{child['session_id']} / {child['model_id'] or 'Unknown model'}",
+                            indent=6,
+                        )
+                        say(usage_line(child["usage"]), indent=6)
             say()
         say("Some work may be estimated; concurrent sessions add.", "dim")
 
     if details:
+        if "pricing" in data:
+            provenance(say, data["pricing"], data.get("fx", {}), details=True)
         for message in data["diagnostics"]:
             say("Diagnostic: " + message, "dim")
     else:
