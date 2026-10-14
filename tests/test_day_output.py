@@ -80,14 +80,11 @@ def test_day_directory_session_hierarchy_preserves_visible_values() -> None:
         < detail_text.index("Record notes")
     )
     assert "/home/kevin/coding/tracker" in text and "/tmp/notes" in text
-    assert "same-prefix-first-session" in text and "same-prefix-second-session" in text
+    assert "same-prefix-first-session" not in text
+    evidence = day_table(example(), details=True)
+    assert "same-prefix-first-session" in evidence and "same-prefix-second-session" in evidence
     assert "historical_upper_bound" not in text and "damaged record" not in text
     assert "estimated" in text and "concurrent" in text and "--details" in text
-    for line in detail_text.splitlines():
-        if "1h 1m 1s" in line:
-            assert line.startswith("    ") and "Build daily report" not in line
-        if "1h 2m 3s" in line:
-            assert "tracker" not in line
 
 
 @pytest.mark.parametrize("width", [20, 48, 88])
@@ -97,7 +94,7 @@ def test_long_unicode_metadata_wraps_without_hiding_paths_ids_or_durations(width
     title = "研究 " + "long-session-title " * 12 + "END-TITLE"
     data["directories"][0]["cwd"] = path
     data["directories"][0]["sessions"][0]["title"] = title
-    text = day_table(data, width=width)
+    text = day_table(data, width=width, details=True)
     assert all(cell_len(line) <= width for line in text.splitlines())
     compact = "".join(text.split())
     assert path in compact and "END-TITLE" in compact
@@ -162,23 +159,54 @@ def test_nonzero_subsecond_work_is_visible_and_missing_metadata_has_fallbacks() 
     session.update(title="", total_seconds=0.25, total_microseconds=250_000)
     text = day_table(data)
     assert "Unknown directory" in text and "Untitled session" in text
-    assert "0.25s" in text and "same-prefix-first-session" in text
+    assert "0.25s" in text
+    assert "same-prefix-first-session" in day_table(data, details=True)
 
 
 @pytest.mark.parametrize("width", [20, 48, 88])
-def test_directory_share_bars_precede_all_session_details(width: int) -> None:
+def test_compact_directory_summary_precedes_all_session_details(width: int) -> None:
     data = example()
     before = copy.deepcopy(data)
     output = day_table(data, width=width, plain=True)
     assert "Directory shares" in output
     summary, details = output.split("Session details", 1)
     compact = "".join(summary.split())
-    assert "/home/kevin/coding/tracker" in compact and "/tmp/notes" in compact
+    assert "tracker" in compact and "notes" in compact
+    all_values = "".join(output.split())
+    assert "/home/kevin/coding/tracker" in all_values and "/tmp/notes" in all_values
     assert "99.0%" in compact and "1.0%" in compact
-    assert "#" in summary and "-" in summary
+    assert "Share" in summary and "Time" in summary
     assert "1h2m3s" in compact and "37s" in compact
     assert "Build daily report" not in summary
     assert "Build daily report" in details and "Review report" in details
     assert all(cell_len(line) <= width for line in output.splitlines())
     assert output.isascii() and "\x1b" not in output
     assert data == before
+
+
+def test_partial_model_without_countable_tokens_does_not_look_free() -> None:
+    from codex_time.token_reporting import UsageSummary
+
+    missing: UsageSummary = {
+        "status": "partial",
+        "tokens": {"total_tokens": None},
+        "observations": 1,
+        "uncertain_observations": 1,
+        "unavailable_session_count": 0,
+        "unavailable_sessions": [],
+        "priced_tokens": 0,
+        "unpriced_tokens": 0,
+        "cost_complete": False,
+        "usd": "0",
+        "cad": "0",
+        "diagnostics": [],
+    }
+    data = example()
+    data["usage"] = missing
+    data["directories"][0]["usage"] = missing
+    data["directories"][0]["sessions"][0]["usage"] = missing
+    data["directories"][0]["sessions"][0]["models"] = [{"model_id": None, "usage": missing}]
+    output = day_table(data, width=120, plain=True)
+    model_row = next(line for line in output.splitlines() if "Unknown model" in line)
+    assert "unavailable" in model_row and "0.00" not in model_row
+    assert "USD 0.00" not in output and "CAD 0.00" not in output

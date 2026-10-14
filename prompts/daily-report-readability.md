@@ -1,0 +1,7 @@
+# Daily report readability handoff
+
+Maintain the compact daily report without dropping accounting or token/cost evidence. Read the plan, inspect the installed source checkout, and verify ordinary, narrow and detailed output before delivery.
+
+```text
+Work in the existing token-cost-reporting checkout of track-codex-sessions; preserve all pre-existing changes. Read plans/daily-report-readability.md, src/codex_time/day_output.py and its tests. Keep every directory/session/model visible in default output with aligned Time/Share/Tokens/USD/CAD columns when they fit; stack labelled metrics on narrow terminals. Retain full paths once per group, disambiguate duplicate basenames, expose full session IDs/categories/children/provenance with --details, and preserve unpriced/unavailable/excluded/subtotal meanings. Do not change accounting, stored data, price rates or JSON schema. Run uv run --offline pytest -q --tb=short; uv run --offline mypy src; uv run --offline ruff check .; uv run --offline ruff format --check src/codex_time/day_output.py tests/test_day_output.py tests/test_day_readability.py. Inspect the same frozen JSON at20/48/88/120/160columns. Reinstall only the existing tool from this verified checkout without restarting the daemon, then verify codex-time day --date 2026-10-13, --details and env COLUMNS=48 ... --plain. Keep README, docs/smoke-tests.md and the plan aligned and in the same future commit. Suggested subject: fix: make daily work reports easier to scan. No commit/push unless requested.
+```

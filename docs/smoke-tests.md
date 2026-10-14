@@ -96,11 +96,11 @@ Verify automatic work accounting, daily repo/session reports, model working-time
 
 **Action:** uv run codex-time projects --date 2026-10-06
 
-**Expected:** Human-readable date/timezone and a day total appear above directories ranked by duration, each with its full cwd, total and share. Sessions beneath each directory show title, stable ID and that day's duration in that directory. Archived sessions contribute by default, root concurrency adds, children add no separate time, and a session resumed elsewhere retains the original cwd for each portion. Use a date with recorded work; an empty day gives an explicit message.
+**Expected:** Human-readable date/timezone and a day total appear above directories ranked by duration, each with its full cwd, total and share. Sessions beneath each directory show title, model, that day's duration in that directory, tokens and USD/CAD costs; full stable IDs appear with --details. Archived sessions contribute by default, root concurrency adds, children add no separate time, and a session resumed elsewhere retains the original cwd for each portion. Use a date with recorded work; an empty day gives an explicit message.
 
 **Action:** uv run codex-time projects --plain
 
-**Expected:** The "Directory shares" summary shows every directory's path, ASCII share bar, percentage and working duration before "Session details". Paths wrap within the terminal width; session titles and durations remain visible in the details.
+**Expected:** The "Directory shares" summary aligns Project, Time, Share, Tokens, USD and CAD when columns fit, then "Session details" retains every session and model. Each full directory path appears with its group; sole-model costs are not repeated when they equal session totals. Output is ASCII. An asterisk means known priced subtotal; unavailable/unpriced amounts never appear as free usage.
 
 **Action:** uv run codex-time projects --date 2026-10-06 --json
 
@@ -108,11 +108,11 @@ Verify automatic work accounting, daily repo/session reports, model working-time
 
 **Action:** uv run codex-time projects --date 2026-10-06 --cwd /absolute/project --archive active --details
 
-**Expected:** Replace /absolute/project with a real project directory. Only original working intervals in that exact cwd contribute, even if a session later resumed elsewhere. Active means unarchived, independent of runtime state. Details show quality flags/diagnostics; `--session SESSION_ID` narrows to one stable identity. Global `--timezone` belongs before `projects`; its timezone defines the calendar date, including 23/25-hour DST days.
+**Expected:** Replace /absolute/project with a real project directory. Only original working intervals in that exact cwd contribute, even if a session later resumed elsewhere. Active means unarchived, independent of runtime state. Details show full session IDs, token categories, child contributions, quality flags/diagnostics and pricing/FX provenance; `--session SESSION_ID` narrows to one stable identity. Global `--timezone` belongs before `projects`; its timezone defines the calendar date, including 23/25-hour DST days.
 
 **Action:** COLUMNS=48 uv run codex-time projects --date 2026-10-06 --plain
 
-**Expected:** Long paths/titles/IDs wrap, directory/session durations remain visible, and output is ASCII without ANSI color. `NO_COLOR=1` and piped automatic output also omit color; `--color always` enables color unless NO_COLOR/plain overrides it. Normal output shows helpful hierarchy and short accuracy notes; raw flags appear only with --details. After ./scripts/setup.sh, the installed `codex-time projects` exposes the same view.
+**Expected:** Labels and metrics stack at 48 columns; complete paths/titles wrap, directory/session durations and token/cost values remain visible, and output is ASCII without ANSI color. Full IDs remain available with --details. At 120 columns, metrics align and long titles fold without ellipsis. `NO_COLOR=1` and piped automatic output also omit color; `--color always` enables color unless NO_COLOR/plain overrides it. Normal output shows helpful hierarchy and short accuracy notes; raw flags appear only with --details. After ./scripts/setup.sh, the installed `codex-time projects` exposes the same view.
 
 ## Model working-time usage
 
