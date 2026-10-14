@@ -8,7 +8,7 @@ Tracking runs automatically in a separate user service, including quiet thinking
 
 ## Tech Stack And Why Chosen
 
-Python 3.12 keeps the app easy to install and inspect. Curses provides a lightweight Linux session picker, Rich formats responsive overview, model and allowance reports, websockets reads the existing Codex control socket, and Pydantic validates versioned JSON. The application separates ingestion, live observation, accounting, storage, reports and presentation; JSON remains the source of truth without a proprietary database.
+Python 3.12 keeps the app easy to install and inspect. Curses provides a lightweight Linux session picker, Rich formats responsive overview, daily, model and allowance reports, websockets reads the existing Codex control socket, and Pydantic validates versioned JSON. The application separates ingestion, live observation, accounting, storage, reports and presentation; JSON remains the source of truth without a proprietary database.
 
 See [smoke tests](docs/smoke-tests.md), the [implementation record](plans/codex-session-time-tracker.md), the [model-usage plan](plans/codex-model-usage-reports.md), the [overview plan](plans/overview-command-layout.md), and the [Cursor handoff prompt](prompts/overview-command-layout.md). Sanitized fixtures, a real disposable Unix WebSocket server, an actual daemon process, a curses PTY, and native timetrace readers exercise the boundaries. Tests cover waits, concurrency, child exclusion, model switches, history, duplicates, schema drift, restart, Git rollback, midnight and DST.
 

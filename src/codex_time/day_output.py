@@ -63,7 +63,7 @@ def day_table(
 
     selected = date.fromisoformat(data["date"])
     say()
-    say(icon("🕒") + "Codex daily work", "bold")
+    say(icon("🕒") + "Recorded Codex working time", "bold")
     say(f"{selected:%a, %b} {selected.day}, {selected.year}", "dim")
     say(data["timezone"], "dim")
     say()

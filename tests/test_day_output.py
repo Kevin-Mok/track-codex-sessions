@@ -68,6 +68,7 @@ def example() -> DailyReport:
 
 def test_day_directory_session_hierarchy_preserves_visible_values() -> None:
     text = day_table(example())
+    assert "Recorded Codex working time" in text
     assert "Tue, Oct 6, 2026" in text and "America/Toronto" in text
     assert "1h 2m 40s" in text and "1h 2m 3s" in text
     assert "1h 1m 1s" in text and "1m 2s" in text and "37s" in text

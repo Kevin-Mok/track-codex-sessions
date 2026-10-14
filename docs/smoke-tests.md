@@ -96,7 +96,7 @@ Verify automatic work accounting, daily repo/session reports, model working-time
 
 **Action:** uv run codex-time projects --date 2026-10-06
 
-**Expected:** Human-readable date/timezone and a day total appear above directories ranked by duration, each with its full cwd, total and share. Sessions beneath each directory show title, stable ID and that day's duration in that directory. Archived sessions contribute by default, root concurrency adds, children add no separate time, and a session resumed elsewhere retains the original cwd for each portion. Use a date with recorded work; an empty day gives an explicit message.
+**Expected:** A "Recorded Codex working time" heading, human-readable date/timezone and a day total appear above directories ranked by duration, each with its full cwd, total and share. Sessions beneath each directory show title, stable ID and that day's duration in that directory. Archived sessions contribute by default, root concurrency adds, children add no separate time, and a session resumed elsewhere retains the original cwd for each portion. Use a date with recorded work; an empty day gives an explicit message.
 
 **Action:** uv run codex-time projects --plain
 
@@ -184,7 +184,7 @@ Verify automatic work accounting, daily repo/session reports, model working-time
 
 ## Recorded evidence
 
-Implementation verification and exact fresh counts are maintained in [the base ExecPlan](../plans/codex-session-time-tracker.md) and [the model-usage ExecPlan](../plans/codex-model-usage-reports.md), and [the allowance-tracking ExecPlan](../plans/codex-model-burn-tracking.md). Terminal presentation checks are recorded in [the readability plan](../plans/codex-burn-terminal-ux.md). Combined overview and command compatibility verification is recorded in [the overview plan](../plans/overview-command-layout.md). The checks above describe expected outcomes; their execution evidence belongs in those plans. Human-controlled approval timing, model switches and five-minute real-model checks are manual checks and must not be claimed as executed without evidence.
+Implementation verification and exact fresh counts are maintained in [the base ExecPlan](../plans/codex-session-time-tracker.md) and [the model-usage ExecPlan](../plans/codex-model-usage-reports.md), and [the allowance-tracking ExecPlan](../plans/codex-model-burn-tracking.md). Terminal presentation checks are recorded in [the readability plan](../plans/codex-burn-terminal-ux.md). Daily directory/session verification and handoff are recorded in [the daily-report plan](../plans/daily-repo-session-time.md). Combined overview and command compatibility verification is recorded in [the overview plan](../plans/overview-command-layout.md). The checks above describe expected outcomes; their execution evidence belongs in those plans. Human-controlled approval timing, model switches and five-minute real-model checks are manual checks and must not be claimed as executed without evidence.
 
 ## Public source checkout
 
