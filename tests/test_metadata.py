@@ -214,3 +214,37 @@ def test_duplicate_lifecycle_preserves_precise_start_when_cwd_remains_estimated(
     )
     RolloutReader(tmp_path).scan(ledger)
     assert ledger.sessions["s1"].turns["t1"].start == precise_start
+
+
+def test_incremental_metadata_row_gate_preserves_titles(tmp_path: Path) -> None:
+    import sqlite3
+
+    from codex_time.metadata import refresh_metadata
+    from codex_time.models import Ledger
+
+    home = tmp_path / "home"
+    home.mkdir()
+    path = home / "state_1.sqlite"
+    with sqlite3.connect(path) as db:
+        db.execute("CREATE TABLE threads(id,cwd,created_at,updated_at,name)")
+        db.execute("INSERT INTO threads VALUES ('one','/test',1700000000,1700000000,'First')")
+    seen: dict[str, str] = {}
+    calls: list[str] = []
+
+    def changed(identity: str, signature: str) -> bool:
+        calls.append(identity)
+        previous = seen.get(identity)
+        seen[identity] = signature
+        return previous != signature
+
+    ledger = Ledger()
+    refresh_metadata(home, ledger, row_changed=changed)
+    assert ledger.sessions["one"].title == "First"
+    ledger.sessions["one"].title = "Index takes precedence"
+    refresh_metadata(home, ledger, row_changed=changed)
+    assert ledger.sessions["one"].title == "Index takes precedence"
+    with sqlite3.connect(path) as db:
+        db.execute("UPDATE threads SET name='Renamed' WHERE id='one'")
+    refresh_metadata(home, ledger, row_changed=changed)
+    assert ledger.sessions["one"].title == "Renamed"
+    assert len(calls) == 3

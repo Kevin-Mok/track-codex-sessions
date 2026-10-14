@@ -60,3 +60,7 @@ uv run python scripts/verify-session-status.py
 ```
 
 Expected: `Full replay matches cached session state`, zero `opened`/`bytes_read` in warm and unchanged scans, and per-phase durations. The verifier changes no live source, tracker record, service or installation. Measured diagnosis, baseline limitations and before/after evidence are in [the investigation plan](../plans/codex-time-resource-investigation.md).
+
+## Merged storage compatibility
+
+The merged checkout preserves v4 token evidence and v5 incremental storage. History, sessions and model-time read timing without quota/token journals. Projects and overview load token evidence for their cost reports. The picker retains its 60-second snapshot cadence. Legacy timing reads invalidate on ledger identity/stat changes; partitioned timing reads reread sessions so an isolated restore is visible even when layout revision stays unchanged. Status remains independent of either durable layout and refreshes its private message cache only on demand.

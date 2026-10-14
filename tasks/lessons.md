@@ -25,3 +25,19 @@ Keep local tracker changes grounded in lifecycle and read-only runtime evidence.
 - A rollout first observed empty must acquire a nonempty prefix identity after growth; hashing zero bytes forever silently disables in-place replacement detection. Persist complete-line byte offsets and preserve all tty candidates until reconciliation so one evidence source cannot hide another source’s ambiguity.
 
 - Use unprofiled real-record microbenchmarks before optimizing Pydantic validation: cProfile amplifies Python-call overhead and can make batching look promising when it is slower. Calendar-report session pruning must use turn work/coverage, keep all waits/contexts in retained sessions, and be verified with a schema-compatible installed-build overlay.
+
+- Detect missing token evidence per actual session and recorded directory before grouping descendants under roots; child tokens cannot make missing parent usage complete, and missing child evidence must not add elapsed time.
+- In an immutable cumulative-usage journal, newly restored earlier observations may already belong to a counted later tranche. Retain overlap uncertainty instead of charging the prefix again.
+- Select an all-time allowance snapshot from eligible quota observation dates, independently of later session or token activity.
+- Treat unsupported context payload schemas as attribution gaps, just like malformed records, so skipped evidence cannot silently reuse an old model or directory.
+
+- SQLite connection context managers control transactions; close read-only metadata connections explicitly so descriptors remain bounded with garbage collection disabled.
+- A disposable row signature records evidence applied to a particular durable snapshot. Invalidate signatures and table cursors after isolated snapshot restore, while preserving independent exact name evidence.
+- Reserve queue capacity for unfinished scan continuations before advancing discovery; enforce the bound at every ingress and share one total page budget.
+- Benchmark helpers must stream large directory inventories too. Filename-list allocations can remain in Python arenas and contaminate retained-memory measurements. Record build identity and retain the misleading original run with its diagnosed instrumentation limit.
+- Publish snapshot/projection recovery markers before advancing ingestion checkpoints; replay interrupted projection state before claiming restart parity.
+
+- Bounded streaming does not necessarily release process-wide filename intern/allocator arenas after cold native history work. Isolate cold preparation in a reaped worker when steady-state RAM matters; preserve writer handoff and count child CPU/RSS separately so startup costs remain visible.
+
+- Content selection alone does not bound ingestion memory: unbounded readline, whole-body Unicode validation and backtracking escape regexes can allocate gigabytes before discarded fields are removed. Stream ignored JSON strings in fixed chunks and preserve complete-record offset semantics; test a body larger than the process memory limit through the public scanner.
+- Sanitized fixtures must exercise real input shapes as well as history counts. A five-root synthetic success did not cover a 2.136 GB rollout record; qualify readiness until actual backfill completes. Use /proc VmHWM for a fresh probe rather than inherited ru_maxrss accounting.

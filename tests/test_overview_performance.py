@@ -36,35 +36,59 @@ def test_old_sessions_never_reconstruct_work(reporter, monkeypatch: pytest.Monke
     assert reporter(data, period="day", selected_date=date(2026, 10, 6)) == expected
 
 
-@pytest.mark.parametrize("timezone_name,selected", [
-    ("America/Toronto", date(2026, 11, 1)),
-    ("America/Toronto", date(2026, 3, 8)),
-    ("UTC", date(2026, 10, 6)),
-])
+@pytest.mark.parametrize(
+    "timezone_name,selected",
+    [
+        ("America/Toronto", date(2026, 11, 1)),
+        ("America/Toronto", date(2026, 3, 8)),
+        ("UTC", date(2026, 10, 6)),
+    ],
+)
 def test_period_filter_matches_full_reconstruction(timezone_name, selected, monkeypatch):
     from zoneinfo import ZoneInfo
 
     import codex_time.model_usage as module
 
     start = datetime.combine(selected, datetime.min.time(), ZoneInfo(timezone_name)).astimezone(UTC)
-    data = Ledger(sessions={"s": Session(
-        id="s", cwd="/one", created=start, updated=start,
-        turns={
-            "cross": Turn(id="cross", cwd="/one", start=start - timedelta(hours=1),
-                          end=start + timedelta(hours=2)),
-            "wait": Turn(id="wait", cwd="/one", start=start - timedelta(days=2),
-                         end=start - timedelta(days=1),
-                         waits=[Span(start=start, end=start + timedelta(minutes=30))]),
-            "open": Turn(id="open", cwd="/one", start=start - timedelta(days=1),
-                         coverage=[Span(start=start + timedelta(hours=3),
-                                        end=start + timedelta(hours=4))]),
-        },
-    )})
+    data = Ledger(
+        sessions={
+            "s": Session(
+                id="s",
+                cwd="/one",
+                created=start,
+                updated=start,
+                turns={
+                    "cross": Turn(
+                        id="cross",
+                        cwd="/one",
+                        start=start - timedelta(hours=1),
+                        end=start + timedelta(hours=2),
+                    ),
+                    "wait": Turn(
+                        id="wait",
+                        cwd="/one",
+                        start=start - timedelta(days=2),
+                        end=start - timedelta(days=1),
+                        waits=[Span(start=start, end=start + timedelta(minutes=30))],
+                    ),
+                    "open": Turn(
+                        id="open",
+                        cwd="/one",
+                        start=start - timedelta(days=1),
+                        coverage=[
+                            Span(start=start + timedelta(hours=3), end=start + timedelta(hours=4))
+                        ],
+                    ),
+                },
+            )
+        }
+    )
     actual = model_report(data, period="day", selected_date=selected, timezone_name=timezone_name)
     # Disable only the conservative session filter, retaining the existing full accounting.
     monkeypatch.setattr(module, "has_work_in_period", lambda *args: True)
-    assert actual == model_report(data, period="day", selected_date=selected,
-                                  timezone_name=timezone_name)
+    assert actual == model_report(
+        data, period="day", selected_date=selected, timezone_name=timezone_name
+    )
     assert actual["total_seconds"] == 9000
 
 

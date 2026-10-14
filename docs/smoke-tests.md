@@ -1,6 +1,6 @@
 # Codex Time smoke tests
 
-Verify automatic work accounting, daily repo/session reports, model working-time usage, a combined allowance/model overview, allowance consumption, safe session resume and service recovery. First run the isolated smoke script, then inspect the installed service and perform the normal-session UI/report checks. All commands require no sudo; fixture checks never access existing timetrace records.
+Verify automatic work accounting, daily repo/session reports, model working-time usage, token/API costs in USD/CAD and a combined allowance/model overview, allowance consumption, safe session resume and service recovery. First run the isolated smoke script, then inspect the installed service and perform the normal-session UI/report checks. All commands require no sudo; fixture checks never access existing timetrace records.
 
 ## Automated fixture checks
 
@@ -34,11 +34,11 @@ Verify automatic work accounting, daily repo/session reports, model working-time
 
 **Action:** Start a normal root task containing a quiet tool lasting roughly 20 seconds. Watch `codex-time sessions --all-dirs` from another terminal.
 
-**Expected:** Thinking and the quiet tool both accrue work; silence does not pause time. Completion stops work and the next idle gap adds nothing.
+**Expected:** Thinking and the quiet tool both accrue work; silence does not pause time. Ingestion and live display may lag by up to 60 seconds. Precise lifecycle completion stops recorded work and the next idle gap adds nothing.
 
 **Action:** Let a normal task reach a blocking question or approval wait, leave it waiting for roughly 20 seconds, then answer/approve. Inspect details and report.
 
-**Expected:** Explicit live wait state pauses work and persists observed waits. A 60-second lifecycle with a 20-second detected wait reports roughly 40 seconds, within sampled uncertainty. Async questions alone do not pause active work. Historical approval waits remain labelled upper bounds. The automated controllable-clock case proves exactly 60 minus 20 equals 40 without depending on a real model’s timing.
+**Expected:** A sampled live wait pauses work and persists observed waits. A short wait visible only through the socket may fall entirely between minute samples; inspect the actual uncertainty rather than assuming one-second accuracy. A 60-second lifecycle with a 20-second known source wait retains exactly 40 seconds of counted work. Async questions alone do not pause active work, and unresolved historical approval waits remain labelled upper bounds. The automated controllable-clock case proves exactly 60 minus 20 equals 40 without depending on a real model’s timing.
 
 **Action:** Run two independent five-minute root tasks concurrently, then inspect all-directory reports. Include a task using child agents.
 
@@ -56,7 +56,7 @@ Verify automatic work accounting, daily repo/session reports, model working-time
 
 **Action:** systemctl --user stop codex-time.service && codex-time import-history && codex-time import-history && systemctl --user start codex-time.service
 
-**Expected:** Comparing a reviewed data-store diff shows no duplicate records or model contexts. Version 1 and 2 ledger timing and wait evidence survive upgrade to version 3; available rollout history backfills model attribution once, and unavailable sources preserve work and saved attribution, with Unknown where evidence is missing. Historical reconciliation may add newly discovered waits or replace marked SQLite estimates with precise rollout times; prior evidence remains covered. Durable data contains only ledger/quota journal/projects/records; checkpoint/lock/staging files stay outside that repository; the content-free quota journal belongs with the ledger in durable snapshots. Existing ~/.timetrace is unaffected. Never run native editing/start/stop commands against tracker data.
+**Expected:** Comparing a reviewed data-store diff shows no duplicate records or model contexts. Version 1, 2 and 3 ledger timing and wait evidence survive upgrade to version 4; available rollout history backfills model attribution once, and unavailable sources preserve work and saved attribution, with Unknown where evidence is missing. Historical reconciliation may add newly discovered waits or replace marked SQLite estimates with precise rollout times; prior evidence remains covered. Preserve the complete durable data root, including the layout marker, per-session snapshots, original ledger, current/legacy evidence journals, verified migration backup, projects and records. Disposable index/checkpoint/lock/staging files remain outside that repository. Existing ~/.timetrace is unaffected. Never run native editing/start/stop commands against tracker data.
 
 **Action:** ./scripts/uninstall.sh
 
@@ -66,7 +66,7 @@ Verify automatic work accounting, daily repo/session reports, model working-time
 
 **Action:** codex-time overview
 
-**Expected:** Today's readable date/timezone and recorded duration appear first, then allowance balance, observed consumption and model work. Model totals rank by duration, with reasoning rows directly beneath their model. Model and reasoning percentages share the overall recorded-work denominator. Model session counts independently count distinct contributing sessions; they do not sum reasoning-row counts. All directories and archive states contribute. Unknown model/reasoning remains visible, and unknown models are unranked. Missing readings give an explicit evidence warning while recorded model work remains available.
+**Expected:** Today's readable date/timezone and recorded duration appear first, then tokens and estimated Standard API costs, allowance balance, observed consumption and model work. Model totals rank by duration, with reasoning rows directly beneath their model. Model and reasoning percentages share the overall recorded-work denominator. Model session counts independently count distinct contributing sessions; they do not sum reasoning-row counts. All directories and archive states contribute. Unknown model/reasoning remains visible, and unknown models are unranked. Missing readings give an explicit evidence warning while recorded model work remains available.
 
 **Action:** codex-time overview week --date 2026-10-06 --details
 
@@ -90,17 +90,17 @@ Verify automatic work accounting, daily repo/session reports, model working-time
 
 **Action:** uv tool install --python 3.12 --force --reinstall-package codex-time "$PWD" && (cd /tmp && codex-time overview --plain && codex-time --help)
 
-**Expected:** Run from the checkout to refresh the installed package without restarting the observer. From outside the checkout, the installed executable exposes the overview and canonical command help, including a same-version source update. No data migration or sudo is required.
+**Expected:** Run from the checkout to refresh the installed package without restarting the observer. From outside the checkout, the installed executable exposes the overview and canonical command help, including a same-version source update. Package refresh alone does not migrate history; the next upgraded daemon start may perform the versioned migration after verifying its backup. No sudo is required.
 
 ## Daily repo and session time
 
 **Action:** uv run codex-time projects --date 2026-10-06
 
-**Expected:** A "Recorded Codex working time" heading, human-readable date/timezone and a day total appear above directories ranked by duration, each with its full cwd, total and share. Sessions beneath each directory show title, stable ID and that day's duration in that directory. Archived sessions contribute by default, root concurrency adds, children add no separate time, and a session resumed elsewhere retains the original cwd for each portion. Use a date with recorded work; an empty day gives an explicit message.
+**Expected:** A "Recorded Codex working time" heading, human-readable date/timezone and a day total appear above directories ranked by duration, each with its full cwd, total and share. Sessions beneath each directory show title, model, that day's duration in that directory, tokens and USD/CAD costs; full stable IDs appear with --details. Archived sessions contribute by default, root concurrency adds, children add no separate time, and a session resumed elsewhere retains the original cwd for each portion. Use a date with recorded work; an empty day gives an explicit message.
 
 **Action:** uv run codex-time projects --plain
 
-**Expected:** The "Directory shares" summary shows every directory's path, ASCII share bar, percentage and working duration before "Session details". Paths wrap within the terminal width; session titles and durations remain visible in the details.
+**Expected:** The "Directory shares" summary aligns Project, Time, Share, Tokens, USD and CAD when columns fit, then "Session details" retains every session and model. Each full directory path appears with its group; sole-model costs are not repeated when they equal session totals. Output is ASCII. An asterisk means known priced subtotal; unavailable/unpriced amounts never appear as free usage.
 
 **Action:** uv run codex-time projects --date 2026-10-06 --json
 
@@ -108,11 +108,11 @@ Verify automatic work accounting, daily repo/session reports, model working-time
 
 **Action:** uv run codex-time projects --date 2026-10-06 --cwd /absolute/project --archive active --details
 
-**Expected:** Replace /absolute/project with a real project directory. Only original working intervals in that exact cwd contribute, even if a session later resumed elsewhere. Active means unarchived, independent of runtime state. Details show quality flags/diagnostics; `--session SESSION_ID` narrows to one stable identity. Global `--timezone` belongs before `projects`; its timezone defines the calendar date, including 23/25-hour DST days.
+**Expected:** Replace /absolute/project with a real project directory. Only original working intervals in that exact cwd contribute, even if a session later resumed elsewhere. Active means unarchived, independent of runtime state. Details show full session IDs, token categories, child contributions, quality flags/diagnostics and pricing/FX provenance; `--session SESSION_ID` narrows to one stable identity. Global `--timezone` belongs before `projects`; its timezone defines the calendar date, including 23/25-hour DST days.
 
 **Action:** COLUMNS=48 uv run codex-time projects --date 2026-10-06 --plain
 
-**Expected:** Long paths/titles/IDs wrap, directory/session durations remain visible, and output is ASCII without ANSI color. `NO_COLOR=1` and piped automatic output also omit color; `--color always` enables color unless NO_COLOR/plain overrides it. Normal output shows helpful hierarchy and short accuracy notes; raw flags appear only with --details. After ./scripts/setup.sh, the installed `codex-time projects` exposes the same view.
+**Expected:** Labels and metrics stack at 48 columns; complete paths/titles wrap, directory/session durations and token/cost values remain visible, and output is ASCII without ANSI color. Full IDs remain available with --details. At 120 columns, metrics align and long titles fold without ellipsis. `NO_COLOR=1` and piped automatic output also omit color; `--color always` enables color unless NO_COLOR/plain overrides it. Normal output shows helpful hierarchy and short accuracy notes; raw flags appear only with --details. After ./scripts/setup.sh, the installed `codex-time projects` exposes the same view.
 
 ## Model working-time usage
 
@@ -184,7 +184,7 @@ Verify automatic work accounting, daily repo/session reports, model working-time
 
 ## Recorded evidence
 
-Implementation verification and exact fresh counts are maintained in [the base ExecPlan](../plans/codex-session-time-tracker.md) and [the model-usage ExecPlan](../plans/codex-model-usage-reports.md), and [the allowance-tracking ExecPlan](../plans/codex-model-burn-tracking.md). Terminal presentation checks are recorded in [the readability plan](../plans/codex-burn-terminal-ux.md). Daily directory/session verification and handoff are recorded in [the daily-report plan](../plans/daily-repo-session-time.md). Combined overview and command compatibility verification is recorded in [the overview plan](../plans/overview-command-layout.md). The checks above describe expected outcomes; their execution evidence belongs in those plans. Human-controlled approval timing, model switches and five-minute real-model checks are manual checks and must not be claimed as executed without evidence.
+Implementation verification and exact fresh counts are maintained in [the base ExecPlan](../plans/codex-session-time-tracker.md) and [the model-usage ExecPlan](../plans/codex-model-usage-reports.md), and [the allowance-tracking ExecPlan](../plans/codex-model-burn-tracking.md). Terminal presentation checks are recorded in [the readability plan](../plans/codex-burn-terminal-ux.md). Daily directory/session verification is recorded in [the daily-report plan](../plans/daily-repo-session-time.md). Combined overview and command compatibility verification is recorded in [the overview plan](../plans/overview-command-layout.md); minute-cadence, final packaged parity and portable recovery evidence is recorded in [the incremental-tracking plan](../plans/incremental-tracking.md). The checks above describe expected outcomes; their execution evidence belongs in those plans. Human-controlled approval timing, model switches and five-minute real-model checks are manual checks and must not be claimed as executed without evidence.
 
 ## Public source checkout
 
@@ -231,3 +231,75 @@ Use the source repository root; no sudo is needed. The verifier copies ledger, q
 **Action:** python3 scripts/verify-overview-performance.py --period month --date 2026-11-01 --timezone America/Toronto --runs 1 --plain
 
 **Expected:** Full-report parity across the month containing the DST fallback, including an empty/future period when no work exists. Human progress/success output is ASCII. No cache can conceal changed inputs; each invocation takes new frozen copies.
+
+## Token usage and estimated API costs
+
+Run these from the repository root without sudo after package refresh. `token-smoke.py` uses the installed CLI by default; use `--executable .venv/bin/codex-time` for source verification. Its values are synthetic expected examples, not personal usage.
+
+**Action:** ./scripts/token-smoke.py --scenario verify
+
+**Expected:** `Token smoke passed: 1,320,000 tokens; USD 2.91; CAD 3.9285 at 1.35.` The next line confirms periods, child attribution, auto-review exclusion, replay and read-only reports. All-time/day/week/month and legacy day exports reconcile, repeated import preserves totals, and report reads leave data/runtime hashes unchanged.
+
+**Action:** ./scripts/token-smoke.py --scenario normal
+
+**Expected:** Day total `1m 0s`; `1.32M tokens | USD 2.91 / CAD 3.93`; both directory rows keep `smoke-root` as the root-session ID, and `gpt-4.1` appears beneath session rows. Child-directory time is zero. The synthetic `codex-auto-review` child is excluded from token/cost totals and model rows, with an explicit exclusion note. The synthetic FX observation date is October 6, 2026; age varies with the current date.
+
+**Action:** ./scripts/token-smoke.py --scenario narrow
+
+**Expected:** A 32-column ASCII layout wraps directory/session/model, token and USD/CAD values without hiding them or emitting color escapes.
+
+**Action:** ./scripts/token-smoke.py --scenario overview
+
+**Expected:** `All recorded history`, `Estimated API token cost - Standard`, the model token subtotal and `Latest allowance snapshot`. No all-time consumption rate appears; this fixture has no allowance readings.
+
+**Action:** ./scripts/token-smoke.py --scenario filtered
+
+**Expected:** Only `/fixture/subagent` contributes: `220k tokens`, `USD 0.48 / CAD 0.65`, root ID `smoke-root`, and `0s` additional work. Week selection, exact cwd, root-session and archive filters remain available.
+
+**Action:** ./scripts/token-smoke.py --scenario json
+
+**Expected:** Clean JSON contains `token_usage.usage.tokens.total_tokens: 1320000`, exact USD/CAD strings numerically equal to `2.91`/`3.9285`, typed coverage, model hierarchy, dated pricing and FX metadata. Decimal strings may retain trailing zeros.
+
+**Action:** ./scripts/token-smoke.py --scenario missing
+
+**Expected:** The internal model remains visible with `1.32M tokens`, `USD unpriced`, `CAD unavailable`, and a `Known priced subtotal` warning. No guessed model alias or exchange rate is used.
+
+**Action:** codex-time projects all --date 2026-10-06
+
+**Expected:** Exit status 2 and `--date cannot be combined with all`; reports never start a network request or modify stored data.
+
+Migration, billing limits, conservative restored-prefix behavior and rollback are documented in [the token-cost guide](token-cost-reporting.md); exact execution evidence is maintained in [the token-cost plan](../plans/codex-token-cost-reporting.md).
+
+## Incremental storage and minute-cadence upgrade
+
+**Action:** Run `uv run python scripts/verify-parity.py --plain --json` in the incremental-tracking checkout.
+
+**Expected:** JSON reports `passed: true`; twelve actual CLI JSON/CSV/report comparisons and five retained aliases pass, including exact large token counters, waits, child exclusion, per-turn cwd, model/reasoning, FX and DST. Migration backup verifies and restart reports remain unchanged. With an installed, isolated native reader, list/report totals match exactly: the default six-session/seven-turn fixture reports 154,625,000,000 native nanoseconds. Missing native readers or conflicting system configuration are explicitly skipped, and interactive picker/resume coverage remains a separate runtime smoke check. Source fixtures remain unchanged; auth/config files are excluded. Only volatile FX `check_age_seconds` is normalized. Add `--work-dir /absolute/fresh-directory` to retain JSON evidence and portable fixture data.
+
+**Recorded validation:** Final source parity passed all twelve comparisons and six aliases. The final wheel's six canonical JSON reports also matched the source reports. Its migrated fixture verified six sessions, seven turns, four unique quota readings and six unique usage observations; exporting it to the portable legacy layout preserved all six old-executable reports and native projections. Migration backup and restart checks passed. Performance-window evidence is recorded separately in the incremental-tracking plan.
+
+**Action:** Build a wheel, install it into a fresh disposable virtual environment, and run `uv run python scripts/service-smoke.py --executable /absolute/venv/bin/codex-time --metadata-fixture --duration 300 --idle-seconds 300 --plain --json`. Add `--fixture /absolute/benchmark/fixture` to exercise measured history scale. --metadata-fixture generates matching read-only thread/turn/name history and excludes initial name bootstrap from steady windows.
+
+**Expected:** The helper confirms installed wheel provenance, then observes five roots through working, waiting, unknown and real reconnect states. Precise lifecycle completion and 2.125-second known wait survive. A 65-second heartbeat remains running; uncertainty is at least 60 seconds, with outage provenance for missed polls. Five-minute active/idle CPU and RSS appear separately from startup and peer/harness resources. No descriptor growth, disallowed RPC or token-journal mutation occurs.
+
+**Action:** Run `uv run python scripts/benchmark.py --baseline /absolute/deployed-checkout --work-dir /tmp/fresh-codex-benchmark --plain --json`, then repeat in another fresh directory with `--skip-baseline --scale 10 --soak-seconds 0`.
+
+**Expected:** Progress continues on stderr and JSON stdout stays clean. Exact fixture/source hashes and history counts, ingestion/observation/persistence/projection timings, 300-second idle/active windows, 1,800-second fixed-input soak and repeated cycles are reported. Idle historical-file identities remain unchanged. Targets or misses are explicit; short runs cannot claim five-minute or soak validation. Tenfold history uses the same five active roots.
+
+**Action:** With a fixture writer stopped, run `uv run python scripts/storage-recovery.py --data-dir /absolute/fixture-data --state-dir /absolute/fixture-state --plain --json verify`, then `export-legacy /absolute/fresh-legacy-export` with the same options.
+
+**Expected:** Portable sessions/turns and exact unique quota/usage identities validate using disk indexes. Export publishes a new v4 ledger and combined journals only after count/hash checks, preserves current post-migration evidence and native records, and leaves its source intact. Old-executable reports match the new data. An existing destination or corrupt durable evidence is refused. Runtime index corruption is quarantined/rebuilt; isolated older session restores replay metadata rather than trusting stale signatures.
+
+**Action:** Run `python3 /absolute/bundle/deployment.py --plain --json verify --bundle /absolute/bundle` against the prepared deployment manifest before requesting live activation.
+
+**Expected:** Final/prior wheels, installed lineage, service definition and hashes are concrete. Activation and rollback use verified stopped-writer backups and current-data legacy conversion. Preparation does not change service state; activation requires the separate decision. After a failed rollout, verify whether the service is paused before declaring it healthy. No raw Codex source/config/auth files enter the bundle. Isolated rollback checks retain new timing, unrelated original files and valid cached FX; an offline actual report uses the same rate. Changed installation/unit hashes and corrupt/mixed backup artifacts refuse install.
+
+**Action:** Against the installed corrected wheel, run the packaged service check above at minute cadence, then inspect actual service health and initial backfill before recording a five-minute production resource window. Include a disposable rollout whose ignored body exceeds the memory limit, with lifecycle fields after that body; append its newline only after the initial scan.
+
+**Expected:** Ignored bodies stream without whole-record allocation; no raw body is stored. Exact lifecycle fields appear only after newline completion, once. The source checkpoint reaches the complete record boundary, backfill finishes without restart/OOM, and CPU/RSS measurements identify build and workload. A synthetic five-root pass alone does not establish production readiness. Explicit unsupported-metadata diagnostics and actual sampling uncertainty remain visible.
+
+## Merged watcher and incremental-report contract
+
+**Action:** From the repository root, run `uv run python scripts/verify-parity.py --plain --json`, then `uv run python scripts/verify-session-status.py` on disposable/frozen source copies as described above. No sudo is needed.
+
+**Expected:** Report parity covers the v4-to-v5 migration and five aliases (burn, models, day, list, report). Status is a standalone watcher command with a sessions array; health retains the numeric count. Watcher cold/warm/full replay agrees and unchanged scans read zero raw bytes. Projects preserve token/USD/CAD evidence, while history/sessions/model-time skip evidence journals. Historical six-alias evidence above describes the pre-watcher build.

@@ -15,7 +15,9 @@ def has_work_in_period(session: Session, start: datetime, end: datetime) -> bool
         if turn.end is not None:
             if turn.start < end and turn.end > start and turn.end > turn.start:
                 return True
-        elif any(span.start < end and span.end > start and span.end > span.start
-                 for span in turn.coverage):
+        elif any(
+            span.start < end and span.end > start and span.end > span.start
+            for span in turn.coverage
+        ):
             return True
     return False

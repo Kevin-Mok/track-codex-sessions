@@ -9,6 +9,8 @@ from zoneinfo import ZoneInfo
 
 from codex_time.accounting import daily_microseconds, segments
 from codex_time.models import AttributedSegment, Ledger, Session, Turn, WorkSegment
+from codex_time.periods import calendar_dates as calendar_dates
+from codex_time.periods import report_dates
 from codex_time.reporting import selected_sessions
 from codex_time.work_period import has_work_in_period
 
@@ -119,19 +121,6 @@ def attributed_segments(
     return result
 
 
-def calendar_dates(period: str, selected: date) -> tuple[date, date]:
-    if period == "day":
-        return selected, selected
-    if period == "week":
-        start = selected - timedelta(days=selected.weekday())
-        return start, start + timedelta(days=6)
-    if period == "month":
-        start = selected.replace(day=1)
-        following = date(start.year + (start.month == 12), start.month % 12 + 1, 1)
-        return start, following - timedelta(days=1)
-    raise ValueError("model report period must be day, week or month")
-
-
 @dataclass
 class Bucket:
     micros: int = 0
@@ -152,9 +141,15 @@ def model_report(
     now: datetime | None = None,
 ) -> ModelUsageReport:
     selected_date = (
-        selected_date or (now or datetime.now(UTC)).astimezone(ZoneInfo(timezone_name)).date()
+        (
+            None
+            if period == "all"
+            else (now or datetime.now(UTC)).astimezone(ZoneInfo(timezone_name)).date()
+        )
+        if selected_date is None
+        else selected_date
     )
-    start, end = calendar_dates(period, selected_date)
+    start, end = report_dates(ledger, period, selected_date, timezone_name)
     zone = ZoneInfo(timezone_name)
     period_start = datetime.combine(start, datetime.min.time(), zone).astimezone(UTC)
     period_end = datetime.combine(

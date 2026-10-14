@@ -15,6 +15,7 @@ from codex_time.model_output import _working_duration
 from codex_time.model_usage import ModelUsageRow
 from codex_time.overview import OverviewReport
 from codex_time.presentation import safe_text
+from codex_time.token_output import provenance, usage_details, usage_line, usage_warning
 
 
 def overview_table(
@@ -75,10 +76,36 @@ def overview_table(
         calendar = f"{first:%b} {first.day}{year} - {last:%b} {last.day}, {last.year}"
     say()
     heading("Codex overview", "📊")
+    if models["period"] == "all":
+        calendar = "All recorded history"
     say(f"{calendar} {separator} {models['timezone']}", "dim")
     say(f"Recorded work: {_working_duration(models['total_microseconds'])}", "bold")
     say()
-    heading("Allowance", "🔋")
+    tokens = data["token_usage"]
+    heading("Estimated API token cost " + ("-" if plain else "—") + " Standard", "💵")
+    say(usage_line(tokens["usage"]), "bold")
+    usage_warning(say, tokens["usage"])
+    if tokens["excluded_models"]:
+        say("Excluded from token/cost totals: " + ", ".join(tokens["excluded_models"]), "dim")
+    for token_model in tokens["models"]:
+        say(token_model["model_id"] or "Unknown model", "bold")
+        say("  " + usage_line(token_model["usage"]))
+        if details:
+            usage_details(say, token_model["usage"])
+    provenance(say, tokens["pricing"], tokens["fx"], details=details)
+    if details:
+        usage_details(say, tokens["usage"])
+        for directory in tokens["directories"]:
+            for session in directory["sessions"]:
+                for child in session["children"]:
+                    say(
+                        f"Child contribution: {child['session_id']} -> {session['id']} "
+                        f"in {directory['cwd'] or 'Unknown directory'} / "
+                        f"{child['model_id'] or 'Unknown'}"
+                    )
+                    say(usage_line(child["usage"]))
+    say()
+    heading("Latest allowance snapshot" if models["period"] == "all" else "Allowance", "🔋")
     say(
         "Weekly allowance"
         if allowance["window_minutes"] == 10080
@@ -102,62 +129,65 @@ def overview_table(
     else:
         say("Allowance balance unavailable: no unambiguous latest reading.", "yellow")
     say()
-    heading("Observed consumption", "⚡")
-    if not allowance["rows"]:
-        say("Rate unavailable without allowance readings.", "dim")
-    for row in allowance["rows"]:
-        selected = date.fromisoformat(row["date"])
-        say(
-            f"{selected:%a, %b} {selected.day} {separator} "
-            f"Reset {local_stamp(row['resets_at'], zone)}",
-            "dim",
-        )
-        if len({(r["plan_type"], r["bucket"]) for r in allowance["rows"]}) > 1:
-            say(f"{row['plan_type'] or 'Unknown plan'} / {row['bucket']}", "dim")
-        rate = row["points_per_working_hour"]
-        say(
-            f"{rate:.2f} pts / working hour"
-            if rate is not None
-            else "Consumption rate unavailable",
-            "bold",
-        )
-        say(
-            f"{row['matched_points']:g} pts matched {separator} "
-            f"{_working_duration(row['working_microseconds'])} working",
-            "dim",
-        )
-        for points, reason in [
-            (row["excluded_gap_points"], "across observation gaps"),
-            (row["excluded_no_work_points"], "without recorded work"),
-            (row["excluded_boundary_points"], "across day boundaries"),
-        ]:
-            if points:
-                say(f"{points:g} pts excluded {reason}.", "yellow")
-        say(f"Rough estimate {separator} low confidence", "yellow")
-        sensitivity = row["rounding_sensitivity_points_per_hour"]
-        if sensitivity is not None and rate is not None and sensitivity > rate:
-            say("Rounded readings can outweigh this rate.", "dim")
-        if "conflicting_quota_observation" in row["quality"]:
-            say("Conflicting readings were left out.", "yellow")
-        if details:
-            say("Allowance evidence", "bold")
-            say(f"Plan / bucket: {row['plan_type'] or 'Unknown'} / {row['bucket']}")
-            say(f"Reset timestamp: {row['resets_at']}")
+    if models["period"] != "all":
+        heading("Observed consumption", "⚡")
+        if not allowance["rows"]:
+            say("Rate unavailable without allowance readings.", "dim")
+        for row in allowance["rows"]:
+            selected = date.fromisoformat(row["date"])
             say(
-                f"Matched windows: {row['matched_windows']}; "
-                f"stale readings skipped: {row['stale_readings']}"
+                f"{selected:%a, %b} {selected.day} {separator} "
+                f"Reset {local_stamp(row['resets_at'], zone)}",
+                "dim",
             )
-            if sensitivity is not None:
-                say(f"Rounding sensitivity: +/-{sensitivity:.2f} pts/h")
-            say(f"Sampling uncertainty: {row['sampling_uncertainty_seconds']:g}s")
-            say("Flags: " + ", ".join(row["quality"]))
-            say("Matched model mix", "bold")
-            for item in row["mix"]:
+            if len({(r["plan_type"], r["bucket"]) for r in allowance["rows"]}) > 1:
+                say(f"{row['plan_type'] or 'Unknown plan'} / {row['bucket']}", "dim")
+            rate = row["points_per_working_hour"]
+            say(
+                f"{rate:.2f} pts / working hour"
+                if rate is not None
+                else "Consumption rate unavailable",
+                "bold",
+            )
+            say(
+                f"{row['matched_points']:g} pts matched {separator} "
+                f"{_working_duration(row['working_microseconds'])} working",
+                "dim",
+            )
+            for points, reason in [
+                (row["excluded_gap_points"], "across observation gaps"),
+                (row["excluded_no_work_points"], "without recorded work"),
+                (row["excluded_boundary_points"], "across day boundaries"),
+            ]:
+                if points:
+                    say(f"{points:g} pts excluded {reason}.", "yellow")
+            say(f"Rough estimate {separator} low confidence", "yellow")
+            sensitivity = row["rounding_sensitivity_points_per_hour"]
+            if sensitivity is not None and rate is not None and sensitivity > rate:
+                say("Rounded readings can outweigh this rate.", "dim")
+            if "conflicting_quota_observation" in row["quality"]:
+                say("Conflicting readings were left out.", "yellow")
+            if details:
+                say("Allowance evidence", "bold")
+                say(f"Plan / bucket: {row['plan_type'] or 'Unknown'} / {row['bucket']}")
+                say(f"Reset timestamp: {row['resets_at']}")
                 say(
-                    f"  {item['model_id'] or 'Unknown'} / {item['reasoning_level'] or 'Unknown'}: "
-                    f"{_working_duration(item['working_microseconds'])}; {item['percentage']:.2f}%"
+                    f"Matched windows: {row['matched_windows']}; "
+                    f"stale readings skipped: {row['stale_readings']}"
                 )
-        say()
+                if sensitivity is not None:
+                    say(f"Rounding sensitivity: +/-{sensitivity:.2f} pts/h")
+                say(f"Sampling uncertainty: {row['sampling_uncertainty_seconds']:g}s")
+                say("Flags: " + ", ".join(row["quality"]))
+                say("Matched model mix", "bold")
+                for item in row["mix"]:
+                    say(
+                        f"  {item['model_id'] or 'Unknown'} / "
+                        f"{item['reasoning_level'] or 'Unknown'}: "
+                        f"{_working_duration(item['working_microseconds'])}; "
+                        f"{item['percentage']:.2f}%"
+                    )
+            say()
     heading("Model work", "🤖")
     grouped: dict[str | None, list[ModelUsageRow]] = {}
     for usage in data["reasoning"]["rows"]:

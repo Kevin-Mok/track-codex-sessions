@@ -13,6 +13,7 @@ from pathlib import Path
 from websockets.asyncio.server import ServerConnection, unix_serve
 
 from codex_time.accounting import segments, total_seconds
+from codex_time.fx import FXSnapshot
 from codex_time.storage import Store
 
 
@@ -44,6 +45,10 @@ async def test_daemon_survives_ui_exit_restart_and_stale_checkpoint(tmp_path: Pa
         + line("turn_context", {"turn_id": "turn", "model": "fixture-model", "effort": "high"})
     )
     store = Store(tmp_path / "data", tmp_path / "state")
+    store.runtime.mkdir(parents=True)
+    (store.runtime / "fx-usd-cad.json").write_text(
+        FXSnapshot(last_success=datetime.now(UTC)).model_dump_json()
+    )
     socket_path = tmp_path / "observer.sock"
     state = "working"
     calls = []
@@ -90,7 +95,10 @@ async def test_daemon_survives_ui_exit_restart_and_stale_checkpoint(tmp_path: Pa
     env = dict(os.environ, TERM="xterm-256color")
     async with unix_serve(handler, str(socket_path)):
         daemon = subprocess.Popen(
-            [*command, "daemon"], env=env, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE
+            [*command, "daemon", "--sample-seconds", "1"],
+            env=env,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.PIPE,
         )
         try:
             await until(
@@ -143,7 +151,10 @@ async def test_daemon_survives_ui_exit_restart_and_stale_checkpoint(tmp_path: Pa
                 store.save(restored)
             state = "working"
             daemon = subprocess.Popen(
-                [*command, "daemon"], env=env, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE
+                [*command, "daemon", "--sample-seconds", "1"],
+                env=env,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.PIPE,
             )
             await until(lambda: "turn" in store.load().sessions["one"].turns)
             await until(
@@ -164,4 +175,6 @@ async def test_daemon_survives_ui_exit_restart_and_stale_checkpoint(tmp_path: Pa
                 daemon.terminate()
                 await until(lambda: daemon.poll() is not None)
             if daemon.stderr:
+                error_output = daemon.stderr.read().decode()
+                assert daemon.returncode == 0, error_output
                 daemon.stderr.close()

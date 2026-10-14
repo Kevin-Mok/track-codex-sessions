@@ -6,7 +6,7 @@ import json
 import os
 import shutil
 import sys
-from datetime import date
+from datetime import date, datetime
 from pathlib import Path
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
@@ -14,11 +14,13 @@ from codex_time.burn import burn_report
 from codex_time.burn_output import burn_csv, burn_table
 from codex_time.daemon import import_history, observations, run_daemon, runtime_status
 from codex_time.day_output import day_table
+from codex_time.fx import read_fx
 from codex_time.model_output import model_csv, model_table
 from codex_time.model_usage import model_report
 from codex_time.overview import overview_report
 from codex_time.overview_output import overview_table
 from codex_time.presentation import build_rows, duration, run_ui
+from codex_time.progress import report_progress
 from codex_time.reporting import daily_report, report
 from codex_time.storage import Store, StoreError
 
@@ -47,11 +49,19 @@ def parser() -> argparse.ArgumentParser:
         metavar="{overview,allowance,model-time,projects,sessions,history,status,health,resume,daemon,import-history}",
     )
     canonical: dict[str, argparse.ArgumentParser] = {}
-    sub.add_parser("daemon", help="track independently of the UI")
+    daemon = sub.add_parser("daemon", help="track independently of the UI")
+    daemon.add_argument(
+        "--sample-seconds",
+        type=float,
+        default=60,
+        help="live sampling interval, greater than zero and at most 60 (default: 60)",
+    )
     sub.add_parser("import-history", help="idempotently reconcile historical lifecycle turns")
     status = sub.add_parser("health", help="show observer health and accuracy diagnostics")
     status.add_argument("--json", action="store_true")
-    status.add_argument("--plain", action="store_true", help="ASCII output without emoji")
+    status.add_argument(
+        "--plain", action="store_true", help="ASCII status without decorative glyphs"
+    )
     canonical["health"] = status
     state = sub.add_parser("status", help="read cached session state for external watchers")
     state.add_argument("--json", action="store_true", help="versioned machine-readable state")
@@ -78,8 +88,11 @@ def parser() -> argparse.ArgumentParser:
             command.add_argument("--session")
             command.add_argument("--from", dest="start", type=date.fromisoformat)
             command.add_argument("--to", dest="end", type=date.fromisoformat)
-    day = sub.add_parser("projects", help="show daily directory totals and session durations")
+    day = sub.add_parser(
+        "projects", help="show directory/session working time, tokens and API costs"
+    )
     canonical["projects"] = day
+    day.add_argument("period", nargs="?", choices=["day", "week", "month", "all"], default="day")
     day.add_argument("--date", type=date.fromisoformat, dest="selected_date")
     day.add_argument("--cwd", help="count only intervals in this directory")
     day.add_argument("--archive", choices=["active", "archived", "all"], default="all")
@@ -131,7 +144,9 @@ def parser() -> argparse.ArgumentParser:
         exports.add_argument("--json", action="store_true")
         exports.add_argument("--csv", action="store_true")
     overview = sub.add_parser("overview", help="combine allowance and complete model working time")
-    overview.add_argument("period", nargs="?", choices=["day", "week", "month"], default="day")
+    overview.add_argument(
+        "period", nargs="?", choices=["day", "week", "month", "all"], default="day"
+    )
     overview.add_argument("--date", type=date.fromisoformat, dest="selected_date")
     overview.add_argument("--window-minutes", type=int, default=10080)
     overview.add_argument("--limit-id", default="codex")
@@ -161,7 +176,7 @@ def main() -> int:
         store = Store(args.data_dir, args.state_dir)
         home = args.codex_home.expanduser().resolve()
         if command == "daemon":
-            asyncio.run(run_daemon(store, home, args.socket))
+            asyncio.run(run_daemon(store, home, args.socket, sample_seconds=args.sample_seconds))
         elif command == "import-history":
             ledger = import_history(store, home)
             print(f"Imported {len(ledger.sessions)} sessions; no duplicate intervals.")
@@ -203,9 +218,32 @@ def main() -> int:
             if args.json:
                 print(json.dumps(status, indent=2))
             else:
-                print("Observer health" if args.plain else "💓 Observer health")
+                plain = args.plain or os.environ.get("CLI_PLAIN") == "1"
+                print(("" if plain else "🩺 ") + "Codex Time health")
+                labels = {
+                    "daemon": "Daemon",
+                    "heartbeat": "Last heartbeat",
+                    "pid": "Process ID",
+                    "live_diagnostic": "Live diagnostic",
+                    "data_dir": "Data directory",
+                    "state_dir": "Runtime directory",
+                    "sessions": "Recorded sessions",
+                    "sampling_interval_seconds": "Sampling seconds",
+                    "notification_mode": "File notifications",
+                    "diagnostics": "Diagnostics",
+                }
                 for key, value in status.items():
-                    print(f"{key}: {value}")
+                    if key == "heartbeat" and isinstance(value, str):
+                        try:
+                            value = (
+                                datetime.fromisoformat(value)
+                                .astimezone(ZoneInfo(args.timezone))
+                                .strftime("%a, %b %-d, %-I:%M:%S %p %Z")
+                            )
+                        except ValueError:
+                            pass
+                    display = value if value is not None else "Not available"
+                    print(f"{labels.get(key, key):<19} : {display}")
         elif command == "history":
             if args.start and args.end and args.end < args.start:
                 raise StoreError("report --to must be on or after --from")
@@ -228,58 +266,63 @@ def main() -> int:
                     json.dumps({k: data[k] for k in ("days", "directories", "sessions")}, indent=2)
                 )
         elif command == "projects":
-            daily_data = daily_report(
-                store.load_timing(),
-                selected_date=args.selected_date,
-                cwd=args.cwd,
-                archive=args.archive,
-                session_id=args.session,
-                timezone_name=args.timezone,
-            )
-            if args.json:
-                print(json.dumps(daily_data, indent=2))
-            else:
-                use_color = args.color == "always" or (
-                    args.color == "auto"
-                    and sys.stdout.isatty()
-                    and os.environ.get("TERM") != "dumb"
+            with report_progress("Reading projects report"):
+                daily_data = daily_report(
+                    store.load(),
+                    period=args.period,
+                    fx=read_fx(store.runtime),
+                    selected_date=args.selected_date,
+                    cwd=args.cwd,
+                    archive=args.archive,
+                    session_id=args.session,
+                    timezone_name=args.timezone,
                 )
-                print(
-                    day_table(
-                        daily_data,
-                        width=shutil.get_terminal_size((88, 24)).columns,
-                        color=use_color,
-                        details=args.details,
-                        plain=args.plain,
+                if args.json:
+                    print(json.dumps(daily_data, indent=2))
+                else:
+                    use_color = args.color == "always" or (
+                        args.color == "auto"
+                        and sys.stdout.isatty()
+                        and os.environ.get("TERM") != "dumb"
                     )
-                )
+                    print(
+                        day_table(
+                            daily_data,
+                            width=shutil.get_terminal_size((88, 24)).columns,
+                            color=use_color,
+                            details=args.details,
+                            plain=args.plain,
+                        )
+                    )
         elif command == "overview":
-            overview_data = overview_report(
-                store.load(),
-                period=args.period,
-                selected_date=args.selected_date,
-                timezone_name=args.timezone,
-                window_minutes=args.window_minutes,
-                limit_id=args.limit_id,
-                max_gap_seconds=args.max_gap_seconds,
-            )
-            if args.json:
-                print(json.dumps(overview_data, indent=2))
-            else:
-                use_color = args.color == "always" or (
-                    args.color == "auto"
-                    and sys.stdout.isatty()
-                    and os.environ.get("TERM") != "dumb"
+            with report_progress("Reading overview report"):
+                overview_data = overview_report(
+                    store.load(),
+                    fx=read_fx(store.runtime),
+                    period=args.period,
+                    selected_date=args.selected_date,
+                    timezone_name=args.timezone,
+                    window_minutes=args.window_minutes,
+                    limit_id=args.limit_id,
+                    max_gap_seconds=args.max_gap_seconds,
                 )
-                print(
-                    overview_table(
-                        overview_data,
-                        width=shutil.get_terminal_size((88, 24)).columns,
-                        color=use_color,
-                        details=args.details,
-                        plain=args.plain,
+                if args.json:
+                    print(json.dumps(overview_data, indent=2))
+                else:
+                    use_color = args.color == "always" or (
+                        args.color == "auto"
+                        and sys.stdout.isatty()
+                        and os.environ.get("TERM") != "dumb"
                     )
-                )
+                    print(
+                        overview_table(
+                            overview_data,
+                            width=shutil.get_terminal_size((88, 24)).columns,
+                            color=use_color,
+                            details=args.details,
+                            plain=args.plain,
+                        )
+                    )
         elif command == "allowance":
             burn_data = burn_report(
                 store.load(),
@@ -378,7 +421,10 @@ def main() -> int:
                     )
         else:
             run_ui(
-                lambda: (store.load_timing(), observations(store)), args.timezone, os.getcwd(), home
+                lambda: (store.picker_snapshot(), observations(store)),
+                args.timezone,
+                os.getcwd(),
+                home,
             )
         return 0
     except (StoreError, OSError, ValueError) as error:

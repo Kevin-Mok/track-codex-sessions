@@ -9,13 +9,14 @@ from collections.abc import Iterator
 from contextlib import contextmanager
 from datetime import UTC, datetime, time, timedelta
 from pathlib import Path
+from time import monotonic
 from typing import Protocol
 from zoneinfo import ZoneInfo
 
 from pydantic import ValidationError
 
 from codex_time.accounting import segments
-from codex_time.models import Ledger, QuotaObservation
+from codex_time.models import Ledger, QuotaObservation, UsageObservation
 
 
 class Digest(Protocol):
@@ -25,8 +26,16 @@ class Digest(Protocol):
 
 
 def quota_key(q: QuotaObservation) -> tuple[object, ...]:
-    return (q.at, q.limit_id, q.plan_type, q.bucket, q.window_minutes, q.resets_at,
-            q.used_percent, q.provenance)
+    return (
+        q.at,
+        q.limit_id,
+        q.plan_type,
+        q.bucket,
+        q.window_minutes,
+        q.resets_at,
+        q.used_percent,
+        q.provenance,
+    )
 
 
 class StoreError(RuntimeError):
@@ -82,7 +91,13 @@ class Store:
         self._embedded_quotas: list[QuotaObservation] = []
         self._quota_source: list[QuotaObservation] | None = None
         self._quota_offset = 0
+        self._usage_values: dict[str, UsageObservation] = {}
+        self._embedded_usage: list[UsageObservation] = []
+        self._usage_source: list[UsageObservation] | None = None
+        self._usage_offset = 0
         self._timing_cache: tuple[tuple[int, ...] | None, Ledger] | None = None
+        self._picker_snapshot: Ledger | None = None
+        self._picker_next_read = 0.0
 
     @staticmethod
     def _stat_key(path: Path) -> tuple[int, ...]:
@@ -109,12 +124,36 @@ class Store:
         staging = self.runtime / ".staging" if path.is_relative_to(self.runtime) else self.staging
         atomic_json(path, value, staging)
 
+    def _write_projection(self, path: Path, value: object) -> None:
+        try:
+            if json.loads(path.read_bytes()) == value:
+                return
+        except (OSError, ValueError):
+            pass
+        self._write(path, value)
+
     def fingerprint(self) -> str | None:
+        if (self.root / "layout.json").exists():
+            identities = []
+            for name in (
+                "layout.json",
+                "quota-observations.jsonl",
+                "usage-observations.jsonl",
+                "legacy-quota-observations.jsonl",
+                "legacy-usage-observations.jsonl",
+            ):
+                digest = self._digest(self.root / name)
+                identities.append(digest.hexdigest() if digest is not None else "-")
+            return hashlib.sha256(":".join(identities).encode()).hexdigest()
         ledger = self._digest(self.root / "ledger.json")
         journal = self._digest(self.root / "quota-observations.jsonl")
-        if journal is None:
+        usage = self._digest(self.root / "usage-observations.jsonl")
+        if journal is None and usage is None:
             return ledger.hexdigest() if ledger is not None else None
-        identity = (ledger.hexdigest() if ledger is not None else "-") + ":" + journal.hexdigest()
+        identity = ledger.hexdigest() if ledger is not None else "-"
+        identity += ":" + (journal.hexdigest() if journal is not None else "-")
+        if usage is not None:
+            identity += ":" + usage.hexdigest()
         return hashlib.sha256(identity.encode()).hexdigest()
 
     @contextmanager
@@ -136,63 +175,40 @@ class Store:
                 self._locked = False
                 fcntl.flock(lock, fcntl.LOCK_UN)
 
-    def _read_ledger(self, *, timing_only: bool = False) -> Ledger:
+    def _read_ledger(self, *, include_evidence: bool = True) -> Ledger:
         path = self.root / "ledger.json"
         try:
-            if not path.exists():
-                return Ledger()
-            if timing_only:
-                raw = json.loads(path.read_bytes())
-                if not isinstance(raw, dict):
-                    raise ValueError("expected ledger object")
-                raw.pop("quota_observations", None)
-                ledger = Ledger.model_validate(raw)
+            if (self.root / "layout.json").exists():
+                from codex_time.incremental_storage import load_timing
+
+                ledger = load_timing(self.root, include_evidence=include_evidence)
             else:
-                ledger = Ledger.model_validate_json(path.read_bytes())
+                if not path.exists():
+                    ledger = Ledger()
+                elif include_evidence:
+                    ledger = Ledger.model_validate_json(path.read_bytes())
+                else:
+                    raw = json.loads(path.read_bytes())
+                    if not isinstance(raw, dict):
+                        raise ValueError("expected ledger object")
+                    raw.pop("quota_observations", None)
+                    raw.pop("usage_observations", None)
+                    ledger = Ledger.model_validate(raw)
             if any(
                 sid != s.id or any(tid != t.id for tid, t in s.turns.items())
                 for sid, s in ledger.sessions.items()
             ):
                 raise ValueError("identifier/key mismatch")
-            return ledger
         except (OSError, ValueError, ValidationError) as exc:
             raise StoreError("invalid ledger.json; restore a valid backup before writing") from exc
+        return ledger
 
-    def load_timing(self) -> Ledger:
-        """Read-only timing snapshot; no quota journal or historical serialization.
-
-        UI refreshes reuse the validated snapshot until the atomic ledger changes.
-        Writer paths always use load(), which validates every durable journal.
-        """
-        path = self.root / "ledger.json"
-        try:
-            stamp = self._stat_key(path)
-        except FileNotFoundError:
-            stamp = None
-        if self._timing_cache is None or self._timing_cache[0] != stamp:
-            self._timing_cache = (stamp, self._read_ledger(timing_only=True))
-        return self._timing_cache[1]
-
-    def summary(self) -> dict[str, object]:
-        """Health metadata without constructing historical turns or quota models."""
-        path = self.root / "ledger.json"
-        if not path.exists():
-            return {"sessions": 0, "diagnostics": []}
-        try:
-            raw = json.loads(path.read_bytes())
-            if not isinstance(raw, dict) or not isinstance(raw.get("sessions"), dict):
-                raise ValueError("invalid summary")
-            diagnostics = raw.get("diagnostics", [])
-            if not isinstance(diagnostics, list) or any(
-                not isinstance(item, str) for item in diagnostics
-            ):
-                raise ValueError("invalid diagnostics")
-            return {"sessions": len(raw["sessions"]), "diagnostics": diagnostics}
-        except (OSError, ValueError) as exc:
-            raise StoreError("invalid ledger.json; cannot read health summary") from exc
-
-    def load(self) -> Ledger:
-        ledger = self._read_ledger()
+    def load(self, *, include_evidence: bool = True) -> Ledger:
+        ledger = self._read_ledger(include_evidence=include_evidence)
+        if not include_evidence:
+            ledger.quota_observations = []
+            ledger.usage_observations = []
+            return ledger
         embedded = {quota_key(q): q for q in ledger.quota_observations}
         ledger.quota_observations = list(embedded.values())
         self._embedded_quotas = ledger.quota_observations.copy()
@@ -220,8 +236,122 @@ class Store:
         self._quota_keys = journal_keys
         self._quota_source = None
         self._quota_offset = 0
+        self._load_usage(ledger)
         self._disk_hash = self.fingerprint()
         return ledger
+
+    def load_timing(self) -> Ledger:
+        """Read timing without journals; cache legacy snapshots by file identity.
+
+        Partitioned sessions can be restored without changing layout revision,
+        so those snapshots are always reread. The picker separately bounds its
+        refresh cadence through picker_snapshot().
+        """
+        if (self.root / "layout.json").exists():
+            return self._read_ledger(include_evidence=False)
+        path = self.root / "ledger.json"
+        try:
+            stamp = self._stat_key(path)
+        except FileNotFoundError:
+            stamp = None
+        if self._timing_cache is None or self._timing_cache[0] != stamp:
+            self._timing_cache = (stamp, self._read_ledger(include_evidence=False))
+        return self._timing_cache[1]
+
+    def summary(self) -> dict[str, object]:
+        if (self.root / "layout.json").exists():
+            from codex_time.incremental_storage import layout
+
+            meta = layout(self.root) or {}
+            return {
+                "sessions": sum(1 for _ in (self.root / "sessions").glob("*.json")),
+                "diagnostics": meta.get("diagnostics", []),
+            }
+        path = self.root / "ledger.json"
+        if not path.exists():
+            return {"sessions": 0, "diagnostics": []}
+        try:
+            raw = json.loads(path.read_bytes())
+            if not isinstance(raw, dict) or not isinstance(raw.get("sessions"), dict):
+                raise ValueError("invalid summary")
+            diagnostics = raw.get("diagnostics", [])
+            if not isinstance(diagnostics, list) or any(
+                not isinstance(item, str) for item in diagnostics
+            ):
+                raise ValueError("invalid diagnostics")
+            return {"sessions": len(raw["sessions"]), "diagnostics": diagnostics}
+        except (OSError, ValueError) as exc:
+            raise StoreError("invalid ledger.json; cannot read health summary") from exc
+
+    def picker_snapshot(self) -> Ledger:
+        now = monotonic()
+        if self._picker_snapshot is None or now >= self._picker_next_read:
+            self._picker_snapshot = self.load(include_evidence=False)
+            self._picker_next_read = now + 60
+        return self._picker_snapshot
+
+    def _load_usage(self, ledger: Ledger) -> None:
+        known: dict[str, UsageObservation] = {}
+        journal_values: dict[str, UsageObservation] = {}
+        journal = self.root / "usage-observations.jsonl"
+        _line_number = 0
+        try:
+            for observation in ledger.usage_observations:
+                if observation.id in known and known[observation.id] != observation:
+                    raise ValueError("conflicting embedded usage identity")
+                known[observation.id] = observation
+            self._embedded_usage = list(known.values())
+            if journal.exists():
+                with journal.open("rb") as source:
+                    for _line_number, line in enumerate(source, 1):
+                        if not line.endswith(b"\n"):
+                            raise ValueError("partial final line")
+                        observation = UsageObservation.model_validate_json(line)
+                        if observation.id in known and known[observation.id] != observation:
+                            raise ValueError("conflicting usage identity")
+                        known[observation.id] = observation
+                        journal_values[observation.id] = observation
+        except (OSError, ValueError, ValidationError) as exc:
+            raise StoreError(
+                f"invalid usage-observations.jsonl at line {_line_number}; "
+                "restore a valid backup before writing"
+            ) from exc
+        ledger.usage_observations = list(known.values())
+        self._usage_values = journal_values
+        self._usage_source = None
+        self._usage_offset = 0
+
+    def _append_usage(self, observations: list[UsageObservation]) -> None:
+        pending: dict[str, UsageObservation] = {}
+        for observation in observations:
+            previous = pending.get(observation.id, self._usage_values.get(observation.id))
+            if previous is not None:
+                if previous != observation:
+                    raise StoreError(
+                        "conflicting usage observation identity; refusing to overwrite"
+                    )
+                continue
+            pending[observation.id] = observation
+        if not pending:
+            return
+        path = self.root / "usage-observations.jsonl"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        current = self._digest(path)
+        digest = current.copy() if current is not None else hashlib.sha256()
+        with path.open("ab") as output:
+            for observation in pending.values():
+                line = (observation.model_dump_json() + "\n").encode()
+                output.write(line)
+                digest.update(line)
+            output.flush()
+            os.fsync(output.fileno())
+        directory = os.open(path.parent, os.O_DIRECTORY)
+        try:
+            os.fsync(directory)
+        finally:
+            os.close(directory)
+        self._file_hashes[path] = (self._stat_key(path), digest)
+        self._usage_values.update(pending)
 
     def _append_quotas(self, observations: list[QuotaObservation]) -> None:
         """Append validated new evidence; never rewrite or truncate existing history."""
@@ -264,10 +394,27 @@ class Store:
         # Migrate already durable embedded evidence before removing it from ledger.json.
         self._append_quotas(self._embedded_quotas)
         self._embedded_quotas = []
-        payload = ledger.model_dump(mode="json", exclude={"quota_observations"})
+        self._append_usage(self._embedded_usage)
+        self._embedded_usage = []
+        payload = ledger.model_dump(
+            mode="json", exclude={"quota_observations", "usage_observations"}
+        )
         rendered = json.dumps(payload, sort_keys=True)
         if rendered != self._ledger_json:
-            self._write(self.root / "ledger.json", payload)
+            if (self.root / "layout.json").exists():
+                import uuid
+
+                from codex_time.incremental_storage import layout, read_session, session_path
+
+                for sid, session in ledger.sessions.items():
+                    destination = session_path(self.root, sid)
+                    if not destination.exists() or read_session(destination, sid) != session:
+                        self._write(destination, session.model_dump(mode="json"))
+                meta = layout(self.root) or {}
+                meta.update(revision=uuid.uuid4().hex, diagnostics=ledger.diagnostics)
+                self._write(self.root / "layout.json", meta)
+            else:
+                self._write(self.root / "ledger.json", payload)
             self._ledger_json = rendered
         # Ingestion appends to this list. Replacements/reloads get a full exact dedup pass.
         offset = self._quota_offset if self._quota_source is ledger.quota_observations else 0
@@ -276,10 +423,16 @@ class Store:
         self._append_quotas(ledger.quota_observations[offset:])
         self._quota_source = ledger.quota_observations
         self._quota_offset = len(ledger.quota_observations)
+        usage_offset = self._usage_offset if self._usage_source is ledger.usage_observations else 0
+        if usage_offset > len(ledger.usage_observations):
+            usage_offset = 0
+        self._append_usage(ledger.usage_observations[usage_offset:])
+        self._usage_source = ledger.usage_observations
+        self._usage_offset = len(ledger.usage_observations)
         self._disk_hash = self.fingerprint()
         self.project(ledger)
 
-    def project(self, ledger: Ledger) -> None:
+    def project(self, ledger: Ledger, *, sweep: bool = True) -> None:
         """Recover native projection deterministically; remove only owned record names."""
         if not self._locked:
             raise StoreError("writer lock required")
@@ -296,10 +449,14 @@ class Store:
                 for span in segments(list(session.turns.values())):
                     project = key(span.cwd)
                     if project not in self._projects:
-                        self._write(
-                            self.root / "projects" / f"{project}.json",
-                            {"key": project, "name": span.cwd},
-                        )
+                        project_path = self.root / "projects" / f"{project}.json"
+                        project_value = {"key": project, "name": span.cwd}
+                        try:
+                            matches = json.loads(project_path.read_bytes()) == project_value
+                        except (OSError, ValueError):
+                            matches = False
+                        if not matches:
+                            self._write(project_path, project_value)
                         self._projects.add(project)
                     cursor = span.start
                     while cursor < span.end:
@@ -322,7 +479,7 @@ class Store:
                             / (f"codex-time-{key(identity)}.json")
                         )
                         owned.add(path)
-                        self._write(
+                        self._write_projection(
                             path,
                             {
                                 "start": local.isoformat(),
@@ -336,9 +493,12 @@ class Store:
                             },
                         )
                         cursor = end
+            if cached:
+                for path in cached[1] - owned:
+                    path.unlink(missing_ok=True)
             expected.update(owned)
             self._projection[session.id] = (signature, owned)
-        for path in (self.root / "records").glob("*/codex-time-*.json"):
+        for path in (self.root / "records").glob("*/codex-time-*.json") if sweep else ():
             if path not in expected:
                 path.unlink()
         for sid in set(self._projection) - set(ledger.sessions):

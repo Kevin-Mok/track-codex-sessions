@@ -1,0 +1,47 @@
+# Token usage and estimated API costs
+
+Use overview to compare all recorded model usage, or projects to inspect directory and session contributions. Select a calendar period, read the USD/CAD estimate and coverage warning, then use details or JSON to inspect the evidence. This guide also explains upgrading the ledger and restoring a previous installation.
+
+## Reports and evidence
+
+`codex-time overview [day|week|month|all]` and `codex-time projects [day|week|month|all]` default to today. The global timezone defaults to America/Toronto; weeks begin Monday. `--date YYYY-MM-DD` selects the containing calendar period and is rejected with `all`. All-time selects available history and overview labels the latest eligible allowance snapshot without a consumption rate.
+
+Projects retains `--cwd`, `--archive active|archived|all`, `--session`, `--details`, `--plain`, `--color auto|always|never`, and `--json`. The directory filter is exact after path normalization and uses each observation's recorded cwd. Archive selection follows the resolved root, or the surviving orphan when its parent is unavailable. Selecting a root includes all descendants; selecting a child ID selects that child's own usage. Tokens in an unfinished or zero-duration session remain visible. Child working duration never adds to root duration.
+
+Usage is ingested from whitelisted `token_count.info` counters and historical rollout context. The durable record includes the observation timestamp, session/turn identity, recorded cwd/model, cumulative and last-request counters, nullable derived increments, request-size evidence and diagnostic flags. It never stores prompts or outputs. SQLite's current model configuration is not used to relabel history. Counts belong to their observation's local date, including across DST, and are never apportioned over working duration.
+
+Repeated cumulative observations contribute zero. Repeated last-request counters are evidence only, never independently added. Counter decreases establish an uncertain reset baseline; later comparable differences can be counted. Missing categories retain null. Fork history before creation seeds the inherited baseline and adds no consumption; missing fork baselines stay uncertain. The first child observation is counted only when its cumulative and last-request evidence proves one whole request. Otherwise its initial baseline is uncertain. Orphan and cyclic ancestry remain visible.
+
+A restored earlier prefix can overlap a tranche already saved from a shortened rollout. The importer preserves the newly discovered evidence with a null delta and `earlier_history_overlap`, so it does not charge that consumption twice. This deliberately preserves the previously recorded subtotal and observation attribution; it cannot redistribute that tranche across newly discovered historical dates/models. The report marks the restored evidence uncertain. Complete reconstruction requires a separate fresh data directory from the full source history, never editing existing journal deltas in place.
+
+## Prices and coverage
+
+The [versioned catalog](../src/codex_time/pricing-v1.json) contains exact public model IDs, decimal Standard rates per million tokens, verification dates and official model/source URLs. It was verified October 8, 2026 against [OpenAI pricing](https://developers.openai.com/api/docs/pricing), model pages and [prompt caching rules](https://developers.openai.com/api/docs/guides/prompt-caching). The same dated catalog applies to all selected history: a present-rate comparison, not historical invoices. Promotional prices are identified in catalog notes and need re-verification when they expire. The exact internal ID `codex-auto-review` is excluded from token/cost totals and model breakdowns at the user’s request. Its durable evidence and working-time accounting are retained; JSON lists the exclusion in `excluded_models`. If the only usage is excluded, the report says excluded rather than unavailable or zero. Other unknown IDs remain visible and unpriced; no alias inference is performed.
+
+Input already includes cached reads and cache writes; those subsets are charged at their documented category rates instead of being charged again as ordinary input. Reasoning tokens are already included in output. Models with long-context tiers require request-level input evidence, established only when the entire cumulative increment agrees with the last-request counters. Session cumulative input cannot select a request's tier. Missing cache-write evidence for models with a separate write premium leaves the non-cached portion unpriced; known categories may still contribute a subtotal. Older models whose documented write handling is ordinary input do not require a separate write counter to price non-cached input.
+
+The UI labels the estimate **Estimated API token cost — Standard**. It excludes tool fees, hosting, taxes, regional processing uplifts and other non-token charges. Incomplete coverage is a **known priced subtotal**. Positive unpriced usage is labelled explicitly instead of appearing free. No observed usage is unavailable; an observed true zero is zero. Recorded work without its own session/directory usage makes coverage incomplete even if another family member has usage.
+
+JSON preserves integer counters and exact Decimal monetary strings. Terminal amounts alone are rounded, so displayed rows can differ by a cent from the displayed aggregate. `--details` adds categories, child contributions, uncertainty, rate provenance and diagnostics. Default output supports narrow terminals, ASCII, NO_COLOR and pipes.
+
+## Canadian dollars
+
+A single cached [Bank of Canada Valet](https://www.bankofcanada.ca/valet-api-how-to/) `FXUSDCAD` observation converts the entire report. The runtime-only `fx-usd-cad.json` cache records its observation date, last attempt, last success and error status outside the Git-backed data directory.
+
+The daemon owns one asynchronous refresh task. Network reads have a five-second timeout, a bounded outer deadline and response-size limit. Attempts are at least one hour apart; successful checks defer another check for 24 hours. A failure or cancellation preserves the last valid rate, and the report exposes the observation age. With no valid cached rate, USD is shown and CAD is unavailable. Reports only read the cache and never wait for network access. Slow overview/projects reads report elapsed progress on stderr every two seconds; fast reports remain quiet and JSON stdout stays clean.
+
+## Migration and rollback
+
+Version 4 adds the append-only `usage-observations.jsonl` journal alongside `quota-observations.jsonl`. The next writer start upgrades v1/v2/v3 ledger metadata and discards old rollout offsets so available token history is backfilled. Timing records and quota evidence remain intact. Reimport is idempotent; archive moves and restarts do not duplicate usage. Rollout scan progress goes to stderr, which systemd captures in the service journal.
+
+Before replacing an existing installation, stop its writer and make a complete backup of its data directory and runtime directory. Preserve the service's custom directory/socket arguments. Use the repository's existing `scripts/setup.sh` refresh with those same options to rebuild the package and restart tracking. Existing default paths are `~/.codex-timetrace` for durable data and the data-root-keyed directory under `~/.local/state/codex-time` (or XDG_STATE_HOME) for runtime state. `codex-time health --json` reports the effective paths. Initialization can take several minutes; an active systemd unit is not proof that backfill finished. Wait for a fresh heartbeat and inspect progress before reading final totals.
+
+If source rollouts are unavailable, existing time/quota data is still valid and usage remains explicitly unavailable. Read-only report commands do not migrate or repair anything. For a deliberate full rescan, stop the writer, run `codex-time import-history`, then restart the service; the existing [smoke procedure](smoke-tests.md#restart-resume-and-data-isolation) provides the reusable command.
+
+To roll back, stop the writer, restore the full matched pre-migration data/runtime backup and reinstall the previous package before restarting. Old executables do not understand v4. Never merely change the version number or remove only the usage journal: that can lose evidence or reuse incompatible offsets. Preserve both journals with the ledger in every durable backup.
+
+## Verification and maintenance
+
+From the repository root, without sudo, run `./scripts/smoke-test.sh`. It includes ingestion, storage migration, pricing, FX and report fixtures plus a disposable CLI replay. `./scripts/token-smoke.py --scenario verify` checks the installed executable; `--executable .venv/bin/codex-time` selects the source installation. Display scenarios are documented with Action/Expected pairs in [smoke tests](smoke-tests.md#token-usage-and-estimated-api-costs).
+
+The exact automated plan, review decisions and execution evidence live in [the ExecPlan](../plans/codex-token-cost-reporting.md). A [paste-ready Cursor prompt](../prompts/codex-token-cost-reporting.md) preserves the validation and delivery constraints. Keep matching implementation, tests, documentation and plan together in any later authorized commit; this implementation task does not request a commit or push.

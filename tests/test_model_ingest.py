@@ -108,7 +108,7 @@ def test_legacy_ledger_backfill_invalidates_old_offsets_preserves_timing(tmp_pat
     store.root.mkdir()
     (store.root / "ledger.json").write_text(json.dumps(original))
     ledger = store.load()
-    assert ledger.version == 3
+    assert ledger.version == 4
     stat = path.stat()
     old = {
         "version": 1,

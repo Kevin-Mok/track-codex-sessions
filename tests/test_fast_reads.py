@@ -75,7 +75,6 @@ def test_incremental_reader_does_not_reread_short_prefix_on_append(
         ["health", "--json"],
         ["sessions", "--json"],
         ["history", "--json"],
-        ["projects", "--json"],
         ["model-time", "day", "--json"],
     ],
 )
@@ -139,3 +138,32 @@ def test_ingester_observed_empty_file_still_detects_grown_replacement(tmp_path: 
     reader.scan(ledger)
     assert "replacement" in ledger.sessions
     assert ledger.sessions["replacement"].turns["new"].end is not None
+
+
+def test_partitioned_timing_observes_restore_without_layout_change(tmp_path: Path) -> None:
+    import json
+
+    from test_incremental_storage import fixture
+
+    from codex_time.incremental_storage import IndexedStore
+
+    root, state = tmp_path / "data", tmp_path / "state"
+    fixture(root, state, 1)
+    with IndexedStore(root, state):
+        pass
+    store = Store(root, state)
+    layout = (root / "layout.json").read_bytes()
+    path = next((root / "sessions").glob("*.json"))
+    original = path.read_bytes()
+    # Neither evidence journal is relevant to a timing-only snapshot.
+    (root / "quota-observations.jsonl").write_text("invalid quota history\n")
+    (root / "usage-observations.jsonl").write_text("invalid token history\n")
+    first = store.load_timing()
+    assert first.quota_observations == first.usage_observations == []
+    updated = json.loads(original)
+    updated["title"] = "Changed snapshot"
+    path.write_text(json.dumps(updated))
+    assert store.load_timing().sessions["0"].title == "Changed snapshot"
+    path.write_bytes(original)
+    assert store.load_timing().sessions["0"].title == first.sessions["0"].title
+    assert (root / "layout.json").read_bytes() == layout

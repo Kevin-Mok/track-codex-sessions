@@ -1,0 +1,226 @@
+{
+  "schema_version": 1,
+  "version": "openai-standard-2026-10-08-v1",
+  "verified_on": "2026-10-08",
+  "source_urls": [
+    "https://developers.openai.com/api/docs/pricing",
+    "https://developers.openai.com/api/docs/guides/prompt-caching"
+  ],
+  "service_tier": "Standard",
+  "currency": "USD",
+  "notes": [
+    "Present-rate comparison, not historical invoice reconstruction.",
+    "Prices per million tokens. Cache reads and cache writes are disjoint subsets of input; reasoning tokens are included in output.",
+    "Request input above 272000 selects the listed long-context tier where documented. Missing request evidence remains unpriced.",
+    "Only exact listed public model IDs are supported; no aliases or internal IDs are guessed.",
+    "Excludes tool fees, hosting, taxes, regional premiums and other non-token charges."
+  ],
+  "models": {
+    "gpt-6-astra": {
+      "model_id": "gpt-6-astra",
+      "short": {
+        "input": "10",
+        "cached_input": "1",
+        "cache_write": "12.5",
+        "output": "50"
+      },
+      "cache_write_mode": "separate",
+      "source_urls": [
+        "https://developers.openai.com/api/docs/models/gpt-6-astra",
+        "https://developers.openai.com/api/docs/pricing",
+        "https://developers.openai.com/api/docs/guides/prompt-caching"
+      ],
+      "verified_on": "2026-10-08",
+      "long_context_threshold": 272000,
+      "long": {
+        "input": "20",
+        "cached_input": "2",
+        "cache_write": "25.0",
+        "output": "75.0"
+      }
+    },
+    "gpt-6.1-sol": {
+      "model_id": "gpt-6.1-sol",
+      "short": {
+        "input": "2",
+        "cached_input": ".10",
+        "cache_write": "2.5",
+        "output": "10"
+      },
+      "cache_write_mode": "separate",
+      "source_urls": [
+        "https://developers.openai.com/api/docs/models/gpt-6.1-sol",
+        "https://developers.openai.com/api/docs/pricing",
+        "https://developers.openai.com/api/docs/guides/prompt-caching"
+      ],
+      "verified_on": "2026-10-08",
+      "long_context_threshold": 272000,
+      "long": {
+        "input": "4",
+        "cached_input": "0.20",
+        "cache_write": "5.0",
+        "output": "15.0"
+      }
+    },
+    "gpt-6-sol": {
+      "model_id": "gpt-6-sol",
+      "short": {
+        "input": "2",
+        "cached_input": ".20",
+        "cache_write": "2.5",
+        "output": "10"
+      },
+      "cache_write_mode": "separate",
+      "source_urls": [
+        "https://developers.openai.com/api/docs/models/gpt-6-sol",
+        "https://developers.openai.com/api/docs/pricing",
+        "https://developers.openai.com/api/docs/guides/prompt-caching"
+      ],
+      "verified_on": "2026-10-08",
+      "long_context_threshold": 272000,
+      "long": {
+        "input": "4",
+        "cached_input": "0.40",
+        "cache_write": "5.0",
+        "output": "15.0"
+      }
+    },
+    "gpt-6-luna": {
+      "model_id": "gpt-6-luna",
+      "short": {
+        "input": ".10",
+        "cached_input": ".01",
+        "cache_write": ".125",
+        "output": ".50"
+      },
+      "cache_write_mode": "separate",
+      "source_urls": [
+        "https://developers.openai.com/api/docs/models/gpt-6-luna",
+        "https://developers.openai.com/api/docs/pricing",
+        "https://developers.openai.com/api/docs/guides/prompt-caching"
+      ],
+      "verified_on": "2026-10-08",
+      "long_context_threshold": 272000,
+      "long": {
+        "input": "0.20",
+        "cached_input": "0.02",
+        "cache_write": "0.250",
+        "output": "0.750"
+      }
+    },
+    "gpt-5.6-sol": {
+      "model_id": "gpt-5.6-sol",
+      "short": {
+        "input": "4",
+        "cached_input": ".40",
+        "cache_write": "5",
+        "output": "20"
+      },
+      "cache_write_mode": "separate",
+      "source_urls": [
+        "https://developers.openai.com/api/docs/models/gpt-5.6-sol",
+        "https://developers.openai.com/api/docs/pricing",
+        "https://developers.openai.com/api/docs/guides/prompt-caching"
+      ],
+      "verified_on": "2026-10-08",
+      "long_context_threshold": 272000,
+      "long": {
+        "input": "8",
+        "cached_input": "0.80",
+        "cache_write": "10",
+        "output": "30.0"
+      },
+      "notes": [
+        "Published promotional rate available at least through 2026-11-21."
+      ]
+    },
+    "gpt-5.4": {
+      "model_id": "gpt-5.4",
+      "short": {
+        "input": "2.5",
+        "cached_input": ".25",
+        "cache_write": null,
+        "output": "15"
+      },
+      "cache_write_mode": "ordinary",
+      "source_urls": [
+        "https://developers.openai.com/api/docs/models/gpt-5.4",
+        "https://developers.openai.com/api/docs/pricing",
+        "https://developers.openai.com/api/docs/guides/prompt-caching"
+      ],
+      "verified_on": "2026-10-08",
+      "long_context_threshold": 272000,
+      "long": {
+        "input": "5.0",
+        "cached_input": "0.50",
+        "cache_write": null,
+        "output": "22.5"
+      },
+      "notes": [
+        "Model documentation describes the long-context multiplier for the full session. Only increments with their own request input-size evidence are priced; session cumulative input never selects a tier."
+      ]
+    },
+    "gpt-5.4-mini": {
+      "model_id": "gpt-5.4-mini",
+      "short": {
+        "input": ".75",
+        "cached_input": ".075",
+        "cache_write": null,
+        "output": "4.5"
+      },
+      "cache_write_mode": "ordinary",
+      "source_urls": [
+        "https://developers.openai.com/api/docs/models/gpt-5.4-mini",
+        "https://developers.openai.com/api/docs/pricing",
+        "https://developers.openai.com/api/docs/guides/prompt-caching"
+      ],
+      "verified_on": "2026-10-08"
+    },
+    "gpt-5.2": {
+      "model_id": "gpt-5.2",
+      "short": {
+        "input": "1.75",
+        "cached_input": ".175",
+        "cache_write": null,
+        "output": "14"
+      },
+      "cache_write_mode": "ordinary",
+      "source_urls": [
+        "https://developers.openai.com/api/docs/models/gpt-5.2",
+        "https://developers.openai.com/api/docs/pricing",
+        "https://developers.openai.com/api/docs/guides/prompt-caching"
+      ],
+      "verified_on": "2026-10-08"
+    },
+    "gpt-5.3-codex": {
+      "model_id": "gpt-5.3-codex",
+      "short": {
+        "input": "1.75",
+        "cached_input": ".175",
+        "cache_write": null,
+        "output": "14"
+      },
+      "cache_write_mode": "ordinary",
+      "source_urls": [
+        "https://developers.openai.com/api/docs/models/gpt-5.3-codex",
+        "https://developers.openai.com/api/docs/pricing",
+        "https://developers.openai.com/api/docs/guides/prompt-caching"
+      ],
+      "verified_on": "2026-10-08"
+    },
+    "gpt-4.1": {
+      "model_id": "gpt-4.1",
+      "short": {
+        "input": "2",
+        "cached_input": ".50",
+        "output": "8"
+      },
+      "cache_write_mode": "ordinary",
+      "verified_on": "2026-10-08",
+      "source_urls": [
+        "https://developers.openai.com/api/docs/models/gpt-4.1",
+        "https://developers.openai.com/api/docs/guides/prompt-caching"
+      ]
+    }
+  }
+}

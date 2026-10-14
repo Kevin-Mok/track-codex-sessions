@@ -103,3 +103,68 @@ def test_restart_preserves_gap_provenance() -> None:
     observer.apply(data, [sample("working", 1)])
     Observer().apply(data, [sample("working", 30)])
     assert "observation_gap" in data.sessions["a"].turns["turn"].quality
+
+
+def test_minute_cadence_counts_quiet_work_and_waits_with_real_uncertainty() -> None:
+    data = ledger()
+    observer = Observer(max_gap=75, sample_seconds=60)
+    for state, seconds in [("working", 0), ("waiting", 60), ("working", 120), ("idle", 180)]:
+        observer.apply(data, [sample(state, seconds)])
+    turn = data.sessions["a"].turns["turn"]
+    assert total_seconds(segments([turn])) == 120
+    assert [(span.start, span.end) for span in turn.waits] == [
+        (sample("waiting", 60).at, sample("working", 120).at)
+    ]
+    assert turn.sampling_uncertainty_seconds == 60
+    assert "sampled_waits_60s" in turn.quality
+    assert "sampled_waits_1s" not in turn.quality
+
+
+def test_minute_cadence_never_bridges_a_missed_sample() -> None:
+    data = ledger()
+    observer = Observer(max_gap=75, sample_seconds=60)
+    for seconds in [0, 60, 180, 240]:
+        observer.apply(data, [sample("working", seconds)])
+    turn = data.sessions["a"].turns["turn"]
+    assert [(span.start, span.end) for span in turn.coverage] == [
+        (sample("working", 0).at, sample("working", 60).at),
+        (sample("working", 180).at, sample("working", 240).at),
+    ]
+    assert total_seconds(segments([turn])) == 120
+    assert "observation_gap" in turn.quality
+    assert turn.sampling_uncertainty_seconds == 60
+
+
+def test_minute_cadence_reports_actual_jitter_instead_of_one_second_accuracy() -> None:
+    data = ledger()
+    observer = Observer(max_gap=75, sample_seconds=60)
+    observer.apply(data, [sample("working", 0)])
+    observer.apply(data, [sample("working", 75)])
+    turn = data.sessions["a"].turns["turn"]
+    assert total_seconds(segments([turn])) == 75
+    assert turn.sampling_uncertainty_seconds == 75
+    assert "sampled_waits_60s" in turn.quality
+
+
+def test_minute_cadence_preserves_earlier_precise_waits() -> None:
+    data = ledger()
+    observer = Observer()
+    for state, seconds in [("working", 0), ("waiting", 1), ("working", 2), ("idle", 3)]:
+        observer.apply(data, [sample(state, seconds)])
+    Observer(max_gap=75, sample_seconds=60).apply(data, [sample("working", 60)])
+    turn = data.sessions["a"].turns["turn"]
+    assert [(span.start, span.end) for span in turn.waits] == [
+        (sample("waiting", 1).at, sample("working", 2).at)
+    ]
+    assert total_seconds(segments([turn])) == 2
+
+
+def test_minute_idle_samples_do_not_modify_historical_evidence() -> None:
+    data = ledger()
+    observer = Observer(max_gap=75, sample_seconds=60)
+    before = data.model_dump_json()
+    for second in (0, 60, 120):
+        observation = sample("idle", second)
+        observation.uncertainty_seconds = 60 + second / 1000
+        observer.apply(data, [observation])
+    assert data.model_dump_json() == before
