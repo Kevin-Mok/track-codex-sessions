@@ -20,8 +20,8 @@ Include this delivery plan and matching status updates with both milestones. No 
 - [x] Complete fresh pytest, Ruff, strict mypy, build and artifact checks.
 - [x] Complete README gate and read-only cache review.
 - [x] Stage inspected daily group and commit milestone 1.
-- [x] Stage inspected resource group and commit milestone 2 (prepared; subject identifies milestone).
-- [ ] Review residuals and push complete series once.
+- [x] Stage inspected resource group and commit milestone 2.
+- [x] Review residuals and attempt one push of the complete series (rejected non-fast-forward).
 
 ## Risks and verification
 
@@ -44,3 +44,11 @@ Warning: external canonical postmortem-memory ledger changed after this task's s
 Completed repository work has no implementation blocker. Remaining operational follow-ups: integrate source session cache with compatible v4 before installation; daemon whole-history persistence remains separate. No installed package/service/data was changed in this delivery. Rollback through ordinary revert; no schema migration. Commit this milestone, inspect final residuals, then perform one push to configured `origin/main`. Push outcome is reported in the final handoff; it cannot be recorded in this commit before it occurs.
 
 Exact automated checks: `.venv/bin/python -m pytest -q`, `.venv/bin/ruff check .`, `.venv/bin/mypy src`, `uv build --offline`, `git diff --check`. Direct/manual plan: source daily report on empty temporary data, status JSON/plain with private runtime storage, and the disposable status verifier; installed overview verifier against frozen inputs for day/week/DST month. Matching README, smoke tests, watcher docs, incident reports and prompts ship in milestone 2. Cursor continuation prompts: `prompts/codex-time-session-cache.md` and `prompts/cto-performance-handoff.md`.
+
+## Milestone 3 — docs: record rejected delivery push
+
+Milestone 2 committed as `c51d2f1`; both implementation commits survived one rejected `git push origin main` (exit 1, non-fast-forward). Repository status was clean immediately afterward. Remote delivery is outstanding because origin/main has newer history; preserve local commits and leave incoming integration to a subsequent reviewed pass. No force-push or automatic history operation. This follow-up adds only the push incident and matching delivery status; README remains accurate (gate `pass_no_change`). No application changes or repeated application tests are needed. New report: `docs/postmortem/2026-10-14-delivery-push-rejected.md`.
+
+Canonical memory lookup for push rejection now succeeds, so the earlier invalid JSON was transient external drift. Safely register both task-created incident reports by current hash using narrow latest-byte insertion and check coverage. Do not repair unrelated missing CTO learning or rewrite external pre-existing edits. Final repository residual review follows this documentation commit; no second push is attempted under the one-push delivery contract.
+
+Final learning verification: sandbox current hash `d483a74688533380d57fb175aab0a89f0993fbe8a85fcbe656f26e4d004f05bf` and push report hash `8a0eb7905ff7f2eb40639deaa36b30bbd9549e45b49816897cf7ea4852722e5b` narrowly registered in canonical memory, explicit no-new-learning decisions retained. Both targeted checks exit 0 with no errors/changed/unregistered aliases. CTO incident targeted check also now exits 0. External drift warning is historical; no outstanding task learning update remains. Unrelated external ledger edits stay outside this repository's commits. Final blocker is remote non-fast-forward rejection alone.
