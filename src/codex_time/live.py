@@ -2,7 +2,7 @@
 
 No observer action loads, resumes, starts, subscribes to, or changes a thread.
 An observation is a sample, not proof of continuity between samples. Callers
-must preserve gaps and the uncertainty of one-second polling in accounting.
+must preserve gaps and the configured sampling uncertainty in accounting.
 """
 
 import asyncio
@@ -30,10 +30,13 @@ def _object(value: object, label: str) -> dict[str, object]:
 class LiveClient:
     """Reconnectable read-only client; a failed poll returns known ids as unknown."""
 
-    def __init__(self, home: Path, socket_path: Path | None = None) -> None:
+    def __init__(
+        self, home: Path, socket_path: Path | None = None, *, sample_seconds: float = 1
+    ) -> None:
         self.home = home
         self.socket_path = socket_path
         self.timeout = 5.0
+        self.sample_seconds = sample_seconds
         self.diagnostic: str | None = None
         self._connection: ClientConnection | None = None
         self._request_id = 0
@@ -155,7 +158,9 @@ class LiveClient:
                             state=self._status(thread.get("status")),
                             at=datetime.now(UTC),
                             cwd=cwd,
-                            uncertainty_seconds=1 + asyncio.get_running_loop().time() - read_began,
+                            uncertainty_seconds=self.sample_seconds
+                            + asyncio.get_running_loop().time()
+                            - read_began,
                         )
                     )
                 self._known = {item.session_id: item for item in observations}
@@ -175,7 +180,13 @@ class LiveClient:
             await self.close()
             at = datetime.now(UTC)
             return [
-                Observation(session_id=item.session_id, state="unknown", at=at, cwd=item.cwd)
+                Observation(
+                    session_id=item.session_id,
+                    state="unknown",
+                    at=at,
+                    cwd=item.cwd,
+                    uncertainty_seconds=self.sample_seconds,
+                )
                 for item in self._known.values()
             ]
 

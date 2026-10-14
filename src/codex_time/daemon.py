@@ -4,19 +4,24 @@ import asyncio
 import os
 import signal
 import sys
+from collections import deque
 from contextlib import suppress
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import cast
 
 from pydantic import ValidationError
 
+from codex_time.bootstrap import prepare_store
+from codex_time.cadence import SAMPLE_SECONDS, is_fresh
+from codex_time.changes import ChangeWatcher
 from codex_time.fx import FXSnapshot, read_fx, refresh_due, refresh_fx
+from codex_time.incremental_storage import IndexedStore
 from codex_time.ingest import RolloutReader, diagnostic
 from codex_time.live import LiveClient
-from codex_time.metadata import refresh_metadata
+from codex_time.metadata import current_rollouts, refresh_metadata
 from codex_time.models import Ledger, Observation
 from codex_time.observer import Observer
+from codex_time.reconciliation import Reconciliation, ScanScheduler
 from codex_time.storage import Store
 
 
@@ -38,11 +43,7 @@ def runtime_status(store: Store) -> dict[str, object]:
     try:
         stamp = raw.get("heartbeat")
         at = datetime.fromisoformat(stamp) if isinstance(stamp, str) else None
-        fresh = (
-            at is not None
-            and at.tzinfo is not None
-            and 0 <= (datetime.now(UTC) - at).total_seconds() <= 5
-        )
+        fresh = at is not None and is_fresh(at, datetime.now(UTC))
     except ValueError:
         fresh = False
     return {
@@ -52,6 +53,10 @@ def runtime_status(store: Store) -> dict[str, object]:
         "live_diagnostic": raw.get("live_diagnostic"),
         "data_dir": str(store.root),
         "state_dir": str(store.runtime),
+        "sampling_interval_seconds": raw.get(
+            "sampling_interval_seconds", 1 if raw.get("version") == 1 else SAMPLE_SECONDS
+        ),
+        "notification_mode": raw.get("notification_mode"),
     }
 
 
@@ -71,32 +76,82 @@ def import_history(store: Store, home: Path) -> Ledger:
 
 
 async def run_daemon(
-    store: Store, home: Path, socket_path: Path | None, stop: asyncio.Event | None = None
+    store: Store,
+    home: Path,
+    socket_path: Path | None,
+    stop: asyncio.Event | None = None,
+    *,
+    sample_seconds: float = SAMPLE_SECONDS,
 ) -> None:
+    if not 0 < sample_seconds <= SAMPLE_SECONDS:
+        raise ValueError("sampling interval must be greater than zero and at most 60 seconds")
     stop = stop or asyncio.Event()
     loop = asyncio.get_running_loop()
     for sig in (signal.SIGINT, signal.SIGTERM):
         loop.add_signal_handler(sig, stop.set)
-    with store.writer():
-        ledger = store.load()
-        runtime = store.runtime_read()
-        cached = (
-            runtime.get("rollouts") if runtime.get("ledger_hash") == store.fingerprint() else None
-        )
-        # A checkpoint is valid only with the durable ledger that preceded it.
-        reader = RolloutReader(
-            home,
-            cast(dict[str, object], cached) if isinstance(cached, dict) else None,
-            progress=lambda message: print(message, file=sys.stderr, flush=True),
-        )
-        observer = Observer()
-        client = LiveClient(home, socket_path)
-        iteration = 0
-        fx_state = read_fx(store.runtime)
-        fx_task: asyncio.Task[FXSnapshot] | None = None
-        try:
+    wake = asyncio.Event()
+    watcher = ChangeWatcher(home)
+    if watcher.fd is not None:
+        loop.add_reader(watcher.fd, wake.set)
+    client = LiveClient(home, socket_path, sample_seconds=sample_seconds)
+    fx_task: asyncio.Task[FXSnapshot] | None = None
+    try:
+        if not await prepare_store(store, stop):
+            return
+        with IndexedStore(store.root, store.runtime) as index:
+            store = index.store  # the Store instance holding the canonical writer lock
+            ledger = index.ledger
+            reader = RolloutReader(home, backend=index)
+            observer = Observer(
+                max_gap=sample_seconds + max(2, sample_seconds / 4), sample_seconds=sample_seconds
+            )
+            pending: deque[Path] = deque()
+            queued: set[Path] = set()
+            reconciliation = Reconciliation(
+                reader.source_paths,
+                notifications=watcher.available and not watcher.needs_reconciliation,
+            )
+            scheduler = ScanScheduler(reconciliation, pending, queued)
+            next_sample = 0.0
+            next_heartbeat = 0.0
+            next_metadata = 0.0
+            metadata_cursors, metadata_index = index.metadata_read()
+            metadata_pending = True
+            active_ids: list[str] = []
+            fx_state = read_fx(store.runtime)
+            startup = True
             while not stop.is_set():
-                began = loop.time()
+                now = loop.time()
+                paths, overflow = watcher.drain()
+                reconciliation.notifications = (
+                    watcher.available and not watcher.needs_reconciliation
+                )
+                # Keep missed-event reconciliation bounded with healthy inotify;
+                # startup, overflow and unavailable notifications reconcile fully.
+                page = scheduler.take(now, notifications=paths, overflow=overflow)
+                if page:
+                    reader.progress = lambda message, startup=startup: (
+                        index.progress(message) if startup else None
+                    )
+                    scheduler.finish(reader.scan_paths(ledger, page))
+                # Metadata has no supported change feed. Check main + WAL files,
+                # and reconcile changed rows only, at most once per sample interval.
+                if now >= next_metadata:
+                    # Exact active-ID reads do not assume source timestamps are
+                    # monotonic. Historical rowid reconciliation has a fixed budget.
+                    metadata_pending = refresh_metadata(
+                        home,
+                        ledger,
+                        row_changed=index.row_changed,
+                        active_ids=active_ids,
+                        cursors=metadata_cursors,
+                        index_state=metadata_index,
+                        title_get=index.title_get,
+                        title_put=index.title_put,
+                    )
+                    reader.reconcile_contexts(ledger, keys=index.context_batch(active_ids))
+                    index.metadata_put(metadata_cursors, metadata_index)
+                    next_metadata = now + (0.1 if startup and metadata_pending else sample_seconds)
                 if fx_task is not None and fx_task.done():
                     try:
                         fx_state = fx_task.result()
@@ -106,65 +161,100 @@ async def run_daemon(
                         )
                     fx_task = None
                 if fx_task is None and refresh_due(fx_state):
-                    # Local attempt timestamp also throttles a cache-write failure.
                     fx_state = fx_state.model_copy(update={"last_attempt": datetime.now(UTC)})
                     fx_task = asyncio.create_task(refresh_fx(store.runtime))
-                # Backfills report progress; short steady-state scans stay quiet.
-                scan_started = loop.time()
-                reader.progress = lambda message, iteration=iteration, scan_started=scan_started: (
-                    print(message, file=sys.stderr, flush=True)
-                    if iteration == 0 or loop.time() - scan_started >= 2
-                    else None
-                )
-                reader.scan(ledger)
-                if iteration % 10 == 0:
-                    refresh_metadata(home, ledger)
-                    reader.reconcile_contexts(ledger)
-                samples = await client.poll()
-                if client.diagnostic:
-                    diagnostic(ledger, client.diagnostic)
-                observer.apply(ledger, samples)
-                # Read-only runtime cwd can refresh resume location without rewriting past turns.
-                for sample in samples:
-                    session = ledger.sessions.get(sample.session_id)
-                    if session and sample.cwd:
-                        session.cwd = sample.cwd
-                    if session and sample.turn_id is None:
-                        ongoing = [
-                            t
-                            for t in session.turns.values()
-                            if t.end is None and t.start <= sample.at
-                        ]
-                        if ongoing:
-                            sample.turn_id = max(ongoing, key=lambda t: t.start).id
-                store.save(ledger)
-                store.runtime_save(
-                    {
-                        "version": 1,
-                        "pid": os.getpid(),
-                        "heartbeat": datetime.now(UTC).isoformat(),
-                        "rollouts": reader.checkpoints,
-                        "ledger_hash": store.fingerprint(),
-                        "live_diagnostic": client.diagnostic,
-                        "observations": {s.session_id: s.model_dump(mode="json") for s in samples},
-                    }
-                )
-                iteration += 1
-                try:
-                    await asyncio.wait_for(
-                        stop.wait(), timeout=max(0.01, 1 - (loop.time() - began))
+                samples = None
+                if now >= next_sample:
+                    samples = await client.poll()
+                    ids = [sample.session_id for sample in samples]
+                    active_ids = ids
+                    active_paths = set(index.current_sources(ids))
+                    active_paths.update(current_rollouts(home, ids))
+                    for path in reader.scan_paths(ledger, active_paths):
+                        if len(pending) < 4096 and path not in queued:
+                            pending.append(path)
+                            queued.add(path)
+                    if client.diagnostic:
+                        diagnostic(ledger, client.diagnostic)
+                    observer.apply(ledger, samples)
+                    for sample in samples:
+                        session = ledger.sessions.get(sample.session_id)
+                        if session and sample.cwd and sample.state != "unknown":
+                            session.cwd = sample.cwd
+                        if session and sample.turn_id is None:
+                            ongoing = [
+                                t
+                                for t in session.turns.values()
+                                if t.end is None and t.start <= sample.at
+                            ]
+                            if ongoing:
+                                sample.turn_id = max(ongoing, key=lambda t: t.start).id
+                    next_sample = loop.time() + sample_seconds
+                index.flush()
+                if samples is not None or now >= next_heartbeat:
+                    previous = store.runtime_read()
+                    store.runtime_save(
+                        {
+                            "version": 2,
+                            "pid": os.getpid(),
+                            "heartbeat": datetime.now(UTC).isoformat(),
+                            "sampling_interval_seconds": sample_seconds,
+                            "notification_mode": "inotify" if watcher.available else "fallback",
+                            "rollouts": reader.checkpoints,
+                            "live_diagnostic": client.diagnostic,
+                            "observations": {
+                                s.session_id: s.model_dump(mode="json") for s in samples
+                            }
+                            if samples is not None
+                            else previous.get("observations", {}),
+                        }
                     )
-                except TimeoutError:
-                    pass
-        finally:
-            if fx_task is not None:
-                fx_task.cancel()
-                with suppress(asyncio.CancelledError, OSError):
-                    await fx_task
-            await client.close()
+                    next_heartbeat = loop.time() + sample_seconds
+                startup = startup and bool(
+                    pending or reconciliation.initializing or metadata_index.get("pending")
+                )
+                wake.clear()
+                timeout = (
+                    0.1
+                    if pending
+                    else max(
+                        0.01,
+                        min(
+                            loop.time() + reconciliation.delay(loop.time()),
+                            next_sample,
+                            next_heartbeat,
+                            next_metadata,
+                        )
+                        - loop.time(),
+                    )
+                )
+                wake_task = asyncio.create_task(wake.wait())
+                stop_task = asyncio.create_task(stop.wait())
+                try:
+                    await asyncio.wait(
+                        (wake_task, stop_task), timeout=timeout, return_when=asyncio.FIRST_COMPLETED
+                    )
+                finally:
+                    for task in (wake_task, stop_task):
+                        task.cancel()
+                        with suppress(asyncio.CancelledError):
+                            await task
+                if wake.is_set():
+                    # Coalesce a short file-event burst; the scanner is single-writer.
+                    await asyncio.sleep(0.1)
+    finally:
+        if watcher.fd is not None:
+            loop.remove_reader(watcher.fd)
+        watcher.close()
+        if fx_task is not None:
+            fx_task.cancel()
+            with suppress(asyncio.CancelledError, OSError):
+                await fx_task
+        await client.close()
+        with store.writer():
             raw = store.runtime_read()
             raw["heartbeat"] = None
             raw["observations"] = {}
             store.runtime_save(raw)
-            for sig in (signal.SIGINT, signal.SIGTERM):
-                loop.remove_signal_handler(sig)
+        for sig in (signal.SIGINT, signal.SIGTERM):
+            loop.remove_signal_handler(sig)

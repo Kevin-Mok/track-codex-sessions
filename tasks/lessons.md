@@ -24,3 +24,14 @@ Keep local tracker changes grounded in lifecycle and read-only runtime evidence.
 - In an immutable cumulative-usage journal, newly restored earlier observations may already belong to a counted later tranche. Retain overlap uncertainty instead of charging the prefix again.
 - Select an all-time allowance snapshot from eligible quota observation dates, independently of later session or token activity.
 - Treat unsupported context payload schemas as attribution gaps, just like malformed records, so skipped evidence cannot silently reuse an old model or directory.
+
+- SQLite connection context managers control transactions; close read-only metadata connections explicitly so descriptors remain bounded with garbage collection disabled.
+- A disposable row signature records evidence applied to a particular durable snapshot. Invalidate signatures and table cursors after isolated snapshot restore, while preserving independent exact name evidence.
+- Reserve queue capacity for unfinished scan continuations before advancing discovery; enforce the bound at every ingress and share one total page budget.
+- Benchmark helpers must stream large directory inventories too. Filename-list allocations can remain in Python arenas and contaminate retained-memory measurements. Record build identity and retain the misleading original run with its diagnosed instrumentation limit.
+- Publish snapshot/projection recovery markers before advancing ingestion checkpoints; replay interrupted projection state before claiming restart parity.
+
+- Bounded streaming does not necessarily release process-wide filename intern/allocator arenas after cold native history work. Isolate cold preparation in a reaped worker when steady-state RAM matters; preserve writer handoff and count child CPU/RSS separately so startup costs remain visible.
+
+- Content selection alone does not bound ingestion memory: unbounded readline, whole-body Unicode validation and backtracking escape regexes can allocate gigabytes before discarded fields are removed. Stream ignored JSON strings in fixed chunks and preserve complete-record offset semantics; test a body larger than the process memory limit through the public scanner.
+- Sanitized fixtures must exercise real input shapes as well as history counts. A five-root synthetic success did not cover a 2.136 GB rollout record; qualify readiness until actual backfill completes. Use /proc VmHWM for a fresh probe rather than inherited ru_maxrss accounting.

@@ -8,7 +8,7 @@ Tracking runs automatically in a separate user service, including quiet thinking
 
 ## Tech Stack And Why Chosen
 
-Python 3.12 keeps the app easy to install and inspect. Curses provides a lightweight Linux session picker, Rich formats responsive overview, model and allowance reports, websockets reads the existing Codex control socket, and Pydantic validates versioned JSON. The application separates ingestion, live observation, accounting, storage, reports and presentation; JSON remains the source of truth without a proprietary database. Decimal arithmetic preserves exact token-cost estimates, and a bounded background Bank of Canada check supplies cached CAD conversion.
+Python 3.12 keeps the app easy to install and inspect. Curses provides a lightweight Linux session picker, Rich formats responsive overview, model and allowance reports, websockets reads the existing Codex control socket, and Pydantic validates versioned JSON. SQLite supplies disposable exact indexes and ijson streams large migrations; portable JSON and evidence journals remain authoritative. The application separates ingestion, live observation, accounting, storage, reports and presentation; JSON remains the source of truth; the daemon caches eight sessions and retrieves historical evidence from disk. Decimal arithmetic preserves exact token-cost estimates, and a bounded background Bank of Canada check supplies cached CAD conversion.
 
 See [smoke tests](docs/smoke-tests.md), the [implementation record](plans/codex-session-time-tracker.md), the [model-usage plan](plans/codex-model-usage-reports.md), the [overview plan](plans/overview-command-layout.md), the [token/cost guide](docs/token-cost-reporting.md), the [token/cost plan](plans/codex-token-cost-reporting.md), and the [Cursor handoff prompt](prompts/codex-token-cost-reporting.md). Sanitized fixtures, a real disposable Unix WebSocket server, an actual daemon process, a curses PTY, and native timetrace readers exercise the boundaries. Tests cover waits, concurrency, child exclusion, model switches, history, duplicates, schema drift, restart, Git rollback, midnight and DST.
 
@@ -84,7 +84,7 @@ cd track-codex-sessions
 codex-time
 ```
 
-Setup rebuilds and installs the local packaged `codex-time` command with uv, including source edits under an unchanged package version, and enables `codex-time.service`. Its first scan may take several minutes for a large history; `systemctl --user is-active codex-time.service` can say active before that scan finishes. `codex-time health` reports a fresh heartbeat once initialization is complete. Restart-on-failure keeps the service independent of the UI. Tracking stops at logout unless the user manager remains running; unobserved time retains uncertainty.
+Setup rebuilds and installs the local packaged `codex-time` command with uv, including source edits under an unchanged package version, and enables `codex-time.service`. Its first versioned storage migration verifies a pre-migration backup, partitions timing by session, and builds disposable indexes and native projections in a short-lived worker before live tracking starts. This can take several minutes for a large history; `systemctl --user is-active codex-time.service` can say active before that scan finishes. `codex-time health` reports a fresh heartbeat once initialization is complete. Restart-on-failure keeps the service independent of the UI. Tracking stops at logout unless the user manager remains running; unobserved time retains uncertainty.
 
 For isolated or alternate installations, pass **absolute** directory paths:
 
@@ -133,7 +133,7 @@ codex-time health --json
 | `health` | Tracker health and accuracy diagnostics |
 | `resume` | Open the session picker |
 
-`codex-time` without arguments also opens the picker. `daemon` and `import-history` retain their existing behavior. Existing scripts can keep using the silent aliases `burn` → `allowance`, `models` → `model-time`, `day` → `projects`, `list` → `sessions`, `report` → `history`, and `status` → `health`. Their existing arguments, defaults, report fields and exit codes are preserved; overview/projects JSON adds token and pricing fields; top-level help advertises the canonical names.
+`codex-time` without arguments also opens the picker. `daemon` defaults to 60-second live sampling and display refresh; `daemon --sample-seconds N` permits intervals greater than zero and at most 60. `health --plain` prints ASCII status; `health --json` preserves clean machine output. `import-history` remains an explicit full reconciliation. Existing scripts can keep using the silent aliases `burn` → `allowance`, `models` → `model-time`, `day` → `projects`, `list` → `sessions`, `report` → `history`, and `status` → `health`. Their existing arguments, defaults, report fields and exit codes are preserved; overview/projects JSON adds token and pricing fields; top-level help advertises the canonical names.
 
 Global options precede the subcommand: `--codex-home`, `--data-dir`, `--state-dir`, `--socket`, and `--timezone`. The `sessions` and `history` commands select the current directory and unarchived sessions by default; directory reports count only intervals attributed to that directory, including a session that has since resumed elsewhere. Date endpoints are inclusive. `--timezone` changes display/report dates; native record directories always use America/Toronto.
 
@@ -267,17 +267,18 @@ These values describe evidence rather than exact human-attention measurements:
 | Indicator | Meaning |
 | --- | --- |
 | `historical_upper_bound` | Lifecycle duration minus known waits; historical approval timestamps are unavailable |
-| `sampled_waits_1s` | Live wait boundaries sampled about once per second; numeric uncertainty includes observed sample spacing and read latency |
+| `sampled_waits_60s` | New live boundaries sampled about once per minute; numeric uncertainty includes actual spacing and read latency |
+| `sampled_waits_1s` | Retained legacy evidence or explicitly configured one-second sampling |
 | `unfinished_observed_only`, `unfinished` | Only bounded observed working coverage contributes; no invented end timestamp |
 | `observation_gap` | Socket outage, long polling gap or daemon restart affected observation |
-| `live_sample_estimate` | UI adds at most a fresh three-second display estimate; durable records use closed evidence |
+| `live_sample_estimate` | UI extends a fresh sample for display only, up to 75 seconds with minute sampling; durable records use closed evidence |
 | `metadata_cwd_estimate`, `metadata_reconciled` | Read-only SQLite fallback provided directory/timing evidence |
 | `no_lifecycle_events` | Old or unsupported history cannot safely supply turn durations |
 | `child_excluded` | Parent already includes this child’s work |
 
 Historical approval waits may make completed totals too large. Polling can miss waits shorter than its sampling interval, and large imports/slow I/O can increase gaps. Unknown or stale unfinished turns never accumulate indefinitely. Later terminal events can replace incomplete observed coverage with an explicitly uncertain lifecycle upper bound, so totals can increase after recovery. Quality flags remain visible in the list, details, reports and ledger. No total is advertised as exact.
 
-Diagnostics omit payload bodies. Malformed complete JSONL lines are skipped visibly, partial final writes wait for completion, archive moves keep identity, and unsupported database schemas retain usable rollout evidence. A corrupt durable ledger or quota/usage journal blocks writes; restore a valid backup after stopping the service. Version 1, 2 and 3 ledgers upgrade automatically to version 4 while preserving recorded timing/waits and model evidence; old ingestion offsets are invalidated once so available history backfills model metadata, numeric allowance readings and token evidence. Missing source files retain recorded work and saved model/quota evidence; work without model evidence stays Unknown. Later scans remain incremental. Runtime caches are disposable; a ledger fingerprint invalidates stale offsets after a Git restore. Restart rebuilds native projections from the valid ledger.
+Diagnostics omit payload bodies. Malformed complete JSONL lines are skipped visibly, partial final writes wait for completion, archive moves keep identity, and unsupported database schemas retain usable rollout evidence. A corrupt durable ledger, session snapshot, layout marker or quota/usage journal blocks writes; restore a valid backup after stopping the service. Version 1, 2 and 3 ledgers upgrade automatically to version 4 while preserving recorded timing/waits and model evidence; old ingestion offsets are invalidated once so available history backfills model metadata, numeric allowance readings and token evidence. Missing source files retain recorded work and saved model/quota evidence; work without model evidence stays Unknown. Later scans remain incremental. Runtime caches are disposable; source identities invalidate stale offsets after a Git restore. Restart checks individual session snapshots, replays interrupted native projections and rebuilds indexes/projections when needed. Stop tracking before restoring files. A healthy minute daemon remains fresh for 90 seconds; observation gaps above 75 seconds are never bridged as continuous work. Short waits can be missed; neither polling nor the 60-second label promises one-second accuracy.
 
 Integration is verified with installed Codex 0.160.1 schemas. Codex storage is internal and may change. The socket adapter uses [documented app-server initialization and thread lookup](https://learn.chatgpt.com/docs/app-server); it restricts itself to initialize, initialized, thread/loaded/list and thread/read with includeTurns=false. It sends no approval responses.
 
@@ -287,8 +288,13 @@ Default durable store: `~/.codex-timetrace`. Existing `~/.timetrace` is preserve
 
 ```text
 ~/.codex-timetrace/
-  ledger.json                 versioned sessions, turns, model contexts, waits and quality
+  layout.json                 v1 format marker and durable revision
+  sessions/<session-hash>.json current versioned timing, contexts, waits and quality
+  ledger.json                 retained original pre-migration ledger
+  migration-backup-v1/         verified original ledger/journals + SHA-256 manifest
+  legacy-*-observations.jsonl  separately migrated embedded legacy evidence
   quota-observations.jsonl     append-only validated allowance readings
+  usage-observations.jsonl     append-only exact token evidence
   projects/<cwd-hash>.json     native timetrace projects
   records/YYYY-MM-DD/          deterministic codex-time-<interval-hash>.json files
 ```
@@ -297,9 +303,17 @@ Closed segments use RFC3339 timestamps and native `start`, `end`, `project:{key}
 
 Checkpoints and heartbeat live under `$XDG_STATE_HOME/codex-time/<data-root-hash>` (default `~/.local/state`). A per-data-root writer lock lives under `~/.local/state/codex-time/locks`. Atomic durable writes stage beside the data root; runtime staging stays in runtime storage. None of these files belongs in the data repository. Model attribution stores only model IDs, reasoning levels, timestamps and provenance. Allowance tracking stores only allowlisted usage/window/reset numbers, timestamps, limit/plan labels and source identity/provenance; raw quota payloads are omitted. No conversation bodies, answers, tool output, auth data or credentials are persisted. Explicit session names and directory paths remain personal metadata; review them before sharing.
 
-Use a separate Git repository inside the data root. Stop the daemon for a consistent snapshot, review `ledger.json`, `quota-observations.jsonl`, `usage-observations.jsonl`, `projects/` and `records/`, then commit with your own workflow and restart. Git restore/pull also requires stopping the service first and restoring the ledger and both journals together. Never merge JSON ledgers mechanically while tracking is running. The app does not initialize repositories, commit, push or synchronize code or data.
+Use a separate Git repository inside the data root. Stop the daemon for a consistent snapshot, review and back up the **entire durable directory**, including `layout.json`, `sessions/`, both evidence journals, separate legacy journals, verified migration backups, `projects/` and `records/`. Use Git LFS for every file over 3 MB and commit its matching `.gitattributes`. Git restore/pull also requires stopping the service first and restoring the complete matching snapshot. Never merge JSON ledgers mechanically while tracking is running. The app does not initialize repositories, commit, push or synchronize code or data.
 
 Native timetrace **list/report readers** are compatible with an explicitly configured separate store. Native list displays project keys and minute labels even when distinct records occur within a minute. Minute-key editing/deleting and native single-timer start/stop commands are unsupported for tracker data: they cannot address its unique filenames and can conflict with projections. [Native storage source](https://github.com/dominikbraun/timetrace/blob/v0.14.3/fs/fs.go) documents reader behavior. The reusable compatibility check runs only in a disposable HOME and config, never against your existing records.
+
+## Resource use and recoverable upgrades
+
+The daemon ingests coalesced file changes, persists only changed sessions, keeps exact observation identities on disk, and updates only affected native records. Healthy inotify uses bounded historical reconciliation; unavailable notifications use a 60-second fallback. Currently loaded source paths are checked with each live sample. Unchanged idle input produces no historical-data writes after warm-up. Reports load evidence on demand; all-history token/allowance reports may still consume substantial transient memory. Health and picker reads avoid observation journals, and the picker refreshes its timing snapshot once a minute.
+
+See [performance evidence and limitations](docs/incremental-tracking.md), [the implementation plan](plans/incremental-tracking.md), and [the maintenance prompt](prompts/incremental-tracking.md). The provisional steady targets are <=0.5% of one core idle, <=2% for five observed roots and <=128 MiB RSS; matched five-minute core runs measured about 0.020% idle CPU and 0.15% active CPU at both history sizes, using 44–50 MiB RSS. The v5 isolated installed wheel measured 0.087% idle / 0.110% active CPU and about 49 MiB daemon RSS with disposable sockets and metadata. Real backfill then exposed a 2.136 GB record that exhausted memory. V6 streams that exact record at 45.3 MiB peak RSS; full live readiness awaits corrected backfill and resource verification. Startup costs and measurement scopes are reported separately in the guide. The reusable [benchmark](scripts/benchmark.py), [CLI/native parity check](scripts/verify-parity.py), [packaged daemon/socket check](scripts/service-smoke.py) and [portable verification/export helper](scripts/storage-recovery.py) use sanitized fixtures or explicitly selected content-free stores, support plain/JSON output, and never send approval responses.
+
+The [deployment helper](scripts/deployment.py) prepares hash-verified current/prior wheels and stopped-writer backup/recovery steps; its prepare/verify actions do not change production. Read the [migration, deployment and rollback procedure](docs/incremental-tracking.md) before upgrading. The old `ledger.json` becomes a retained snapshot after migration. Export current evidence with `storage-recovery.py export-legacy` before activating an older executable; opening that old file directly would omit post-migration timing from its view.
 
 ## Development and verification
 

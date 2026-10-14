@@ -1,7 +1,7 @@
 """Historical model projections over the existing counted working-time intervals."""
 
 from dataclasses import dataclass, field
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, timedelta
 from itertools import groupby
 from pathlib import Path
 from typing import TypedDict
@@ -12,6 +12,7 @@ from codex_time.models import AttributedSegment, Ledger, Session, Turn, WorkSegm
 from codex_time.periods import calendar_dates as calendar_dates
 from codex_time.periods import report_dates
 from codex_time.reporting import selected_sessions
+from codex_time.work_period import has_work_in_period
 
 
 class ModelUsageRow(TypedDict):
@@ -149,10 +150,17 @@ def model_report(
         else selected_date
     )
     start, end = report_dates(ledger, period, selected_date, timezone_name)
+    zone = ZoneInfo(timezone_name)
+    period_start = datetime.combine(start, datetime.min.time(), zone).astimezone(UTC)
+    period_end = datetime.combine(
+        end + timedelta(days=1), datetime.min.time(), zone
+    ).astimezone(UTC)
     buckets: dict[tuple[str | None, str | None], Bucket] = {}
     for session in selected_sessions(
         ledger, cwd=cwd or "/", all_directories=cwd is None, archive=archive
     ):
+        if not has_work_in_period(session, period_start, period_end):
+            continue
         for span in attributed_segments(session):
             if cwd is not None and Path(span.cwd).resolve() != Path(cwd).resolve():
                 continue

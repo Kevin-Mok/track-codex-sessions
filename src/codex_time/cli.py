@@ -6,7 +6,7 @@ import json
 import os
 import shutil
 import sys
-from datetime import date
+from datetime import date, datetime
 from pathlib import Path
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
@@ -50,10 +50,19 @@ def parser() -> argparse.ArgumentParser:
         metavar="{overview,allowance,model-time,projects,sessions,history,health,resume,daemon,import-history}",
     )
     canonical: dict[str, argparse.ArgumentParser] = {}
-    sub.add_parser("daemon", help="track independently of the UI")
+    daemon = sub.add_parser("daemon", help="track independently of the UI")
+    daemon.add_argument(
+        "--sample-seconds",
+        type=float,
+        default=60,
+        help="live sampling interval, greater than zero and at most 60 (default: 60)",
+    )
     sub.add_parser("import-history", help="idempotently reconcile historical lifecycle turns")
     status = sub.add_parser("health", help="show observer health and accuracy diagnostics")
     status.add_argument("--json", action="store_true")
+    status.add_argument(
+        "--plain", action="store_true", help="ASCII status without decorative glyphs"
+    )
     canonical["health"] = status
     sub.add_parser("resume", help="open the searchable session picker")
     for name in ("sessions", "history"):
@@ -164,7 +173,7 @@ def main() -> int:
         store = Store(args.data_dir, args.state_dir)
         home = args.codex_home.expanduser().resolve()
         if command == "daemon":
-            asyncio.run(run_daemon(store, home, args.socket))
+            asyncio.run(run_daemon(store, home, args.socket, sample_seconds=args.sample_seconds))
         elif command == "import-history":
             ledger = import_history(store, home)
             print(f"Imported {len(ledger.sessions)} sessions; no duplicate intervals.")
@@ -172,19 +181,41 @@ def main() -> int:
                 print(message, file=sys.stderr)
         elif command == "health":
             status = runtime_status(store)
-            ledger = store.load()
-            status["sessions"] = len(ledger.sessions)
-            status["diagnostics"] = ledger.diagnostics
+            status.update(store.summary())
             if args.json:
                 print(json.dumps(status, indent=2))
             else:
+                plain = args.plain or os.environ.get("CLI_PLAIN") == "1"
+                print(("" if plain else "🩺 ") + "Codex Time health")
+                labels = {
+                    "daemon": "Daemon",
+                    "heartbeat": "Last heartbeat",
+                    "pid": "Process ID",
+                    "live_diagnostic": "Live diagnostic",
+                    "data_dir": "Data directory",
+                    "state_dir": "Runtime directory",
+                    "sessions": "Recorded sessions",
+                    "sampling_interval_seconds": "Sampling seconds",
+                    "notification_mode": "File notifications",
+                    "diagnostics": "Diagnostics",
+                }
                 for key, value in status.items():
-                    print(f"{key}: {value}")
+                    if key == "heartbeat" and isinstance(value, str):
+                        try:
+                            value = (
+                                datetime.fromisoformat(value)
+                                .astimezone(ZoneInfo(args.timezone))
+                                .strftime("%a, %b %-d, %-I:%M:%S %p %Z")
+                            )
+                        except ValueError:
+                            pass
+                    display = value if value is not None else "Not available"
+                    print(f"{labels.get(key, key):<19} : {display}")
         elif command == "history":
             if args.start and args.end and args.end < args.start:
                 raise StoreError("report --to must be on or after --from")
             data = report(
-                store.load(),
+                store.load(include_evidence=False),
                 cwd=args.cwd,
                 all_directories=args.all_dirs,
                 archive=args.archive,
@@ -317,7 +348,7 @@ def main() -> int:
                 )
         elif command == "sessions":
             rows = build_rows(
-                store.load(),
+                store.load(include_evidence=False),
                 observations(store),
                 cwd=args.cwd,
                 timezone_name=args.timezone,
@@ -356,7 +387,12 @@ def main() -> int:
                         f"{row.title}  {row.cwd}  [{row.quality}]"
                     )
         else:
-            run_ui(lambda: (store.load(), observations(store)), args.timezone, os.getcwd(), home)
+            run_ui(
+                lambda: (store.picker_snapshot(), observations(store)),
+                args.timezone,
+                os.getcwd(),
+                home,
+            )
         return 0
     except (StoreError, OSError, ValueError) as error:
         print(f"codex-time: {error}", file=sys.stderr)

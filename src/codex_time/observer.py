@@ -5,9 +5,10 @@ from codex_time.models import Ledger, Observation, Span, Turn
 
 
 class Observer:
-    def __init__(self, max_gap: float = 3.0) -> None:
+    def __init__(self, max_gap: float = 3.0, *, sample_seconds: float = 1.0) -> None:
         self.previous: dict[str, Observation] = {}
         self.max_gap = max_gap
+        self.sample_seconds = sample_seconds
 
     def apply(self, ledger: Ledger, samples: list[Observation]) -> None:
         current = {s.session_id: s for s in samples}
@@ -46,6 +47,10 @@ class Observer:
             if elapsed > self.max_gap:
                 self._gap(ledger, sid)
                 continue
+            # Idle/unknown samples add no timing evidence. Poll jitter must not
+            # rewrite history or inflate uncertainty without a work/wait span.
+            if previous.state not in ("working", "waiting"):
+                continue
             # Do not smear a previous turn's state across a new turn boundary.
             start = max(previous.at, turn.start)
             end = min(sample.at, turn.end) if turn.end is not None else sample.at
@@ -54,6 +59,7 @@ class Observer:
             span = Span(start=start, end=end)
             turn.sampling_uncertainty_seconds = max(
                 turn.sampling_uncertainty_seconds,
+                self.sample_seconds,
                 previous.uncertainty_seconds,
                 sample.uncertainty_seconds,
                 elapsed,
@@ -64,8 +70,9 @@ class Observer:
                 turn.coverage = merge_spans([*turn.coverage, span])
             elif previous.state == "waiting":
                 turn.waits = merge_spans([*turn.waits, span])
-            if "sampled_waits_1s" not in turn.quality:
-                turn.quality.append("sampled_waits_1s")
+            sampled_quality = f"sampled_waits_{self.sample_seconds:g}s"
+            if sampled_quality not in turn.quality:
+                turn.quality.append(sampled_quality)
             if turn.end is None and "unfinished_observed_only" not in turn.quality:
                 turn.quality.append("unfinished_observed_only")
         self.previous = current

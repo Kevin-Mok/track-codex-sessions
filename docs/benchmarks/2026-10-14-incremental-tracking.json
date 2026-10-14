@@ -1,0 +1,2281 @@
+{
+  "schema_version": 1,
+  "date": "2026-10-14",
+  "scope": "Content-free synthetic inputs and isolated processes; production unchanged. CPU is percent of one core. Logical I/O is process rchar/wchar, not disk throughput. Startup and backfill are separate from steady targets.",
+  "targets": {
+    "idle_cpu_percent": 0.5,
+    "active_cpu_percent": 2,
+    "steady_rss_mib": 128,
+    "window_seconds": 300,
+    "soak_seconds": 1800
+  },
+  "baseline": {
+    "fixture": {
+      "counts": {
+        "sessions": 5449,
+        "turns": 49885,
+        "quota": 285348,
+        "usage": 195166
+      },
+      "sha256": "204b6f1a21a8d4fbc9f0389055d4f09a9384e9a4518fddef9240dbbb0e7ce7c7",
+      "bytes": 94815866,
+      "content_free": true,
+      "observed_roots": 5
+    },
+    "measurements": [
+      {
+        "backend": "baseline",
+        "build_unchanged_during_measurement": true,
+        "fixture_sha256": "204b6f1a21a8d4fbc9f0389055d4f09a9384e9a4518fddef9240dbbb0e7ce7c7",
+        "operations": {
+          "cold_start": {
+            "cpu_percent_one_core": 98.88703768918852,
+            "cpu_seconds": 11.479109686000001,
+            "fd_change": 1,
+            "fds": 5,
+            "logical_io": {
+              "cancelled_write_bytes": 0,
+              "rchar": 189633389,
+              "read_bytes": 0,
+              "syscr": 19932,
+              "syscw": 0,
+              "wchar": 0,
+              "write_bytes": 0
+            },
+            "operations": 1,
+            "peak_rss_mib": 1122.64453125,
+            "rss_change_mib": 1091.59765625,
+            "rss_mib": 1122.64453125,
+            "wall_seconds": 11.608305753965396
+          },
+          "history_and_backup_verification": {
+            "cpu_percent_one_core": 95.97657403484591,
+            "cpu_seconds": 0.0038432599999964623,
+            "fd_change": 0,
+            "fds": 5,
+            "logical_io": {
+              "cancelled_write_bytes": 0,
+              "rchar": 1690,
+              "read_bytes": 0,
+              "syscr": 4,
+              "syscw": 0,
+              "wchar": 0,
+              "write_bytes": 0
+            },
+            "operations": 1,
+            "peak_rss_mib": 1368.54296875,
+            "rss_change_mib": 0.0,
+            "rss_mib": 1263.94140625,
+            "wall_seconds": 0.0040043729823082685
+          },
+          "ingestion": {
+            "cpu_percent_one_core": 99.33410732633976,
+            "cpu_seconds": 0.9785992619999995,
+            "fd_change": 0,
+            "fds": 5,
+            "logical_io": {
+              "cancelled_write_bytes": 0,
+              "rchar": 4091,
+              "read_bytes": 0,
+              "syscr": 24,
+              "syscw": 0,
+              "wchar": 0,
+              "write_bytes": 0
+            },
+            "operations": 1,
+            "peak_rss_mib": 1195.0,
+            "rss_change_mib": 72.35546875,
+            "rss_mib": 1195.0,
+            "wall_seconds": 0.9851593660423532
+          },
+          "observation": {
+            "cpu_percent_one_core": 99.15100861257642,
+            "cpu_seconds": 0.00023135500000037723,
+            "fd_change": 0,
+            "fds": 5,
+            "logical_io": {
+              "cancelled_write_bytes": 0,
+              "rchar": 1661,
+              "read_bytes": 0,
+              "syscr": 4,
+              "syscw": 0,
+              "wchar": 0,
+              "write_bytes": 0
+            },
+            "operations": 2,
+            "peak_rss_mib": 1195.01171875,
+            "rss_change_mib": 0.0078125,
+            "rss_mib": 1195.01171875,
+            "wall_seconds": 0.00023333600256592035
+          },
+          "persistence_including_projection": {
+            "cpu_percent_one_core": 24.5010861060352,
+            "cpu_seconds": 40.193797076,
+            "fd_change": 0,
+            "fds": 5,
+            "logical_io": {
+              "cancelled_write_bytes": 0,
+              "rchar": 37203478,
+              "read_bytes": 430080,
+              "syscr": 43,
+              "syscw": 65321,
+              "wchar": 50690233,
+              "write_bytes": 286134272
+            },
+            "operations": 1,
+            "peak_rss_mib": 1333.04296875,
+            "rss_change_mib": 54.0,
+            "rss_mib": 1249.015625,
+            "wall_seconds": 164.04904216103023
+          },
+          "projection": {
+            "cpu_percent_one_core": 99.17970860144068,
+            "cpu_seconds": 0.5560653319999957,
+            "fd_change": 0,
+            "fds": 5,
+            "logical_io": {
+              "cancelled_write_bytes": 0,
+              "rchar": 1690,
+              "read_bytes": 0,
+              "syscr": 4,
+              "syscw": 0,
+              "wchar": 0,
+              "write_bytes": 0
+            },
+            "operations": 1,
+            "peak_rss_mib": 1333.04296875,
+            "rss_change_mib": 1.4921875,
+            "rss_mib": 1250.5078125,
+            "wall_seconds": 0.5606644139625132
+          },
+          "unchanged_ingestion": {
+            "cpu_percent_one_core": 99.56093556053011,
+            "cpu_seconds": 0.0006331080000023803,
+            "fd_change": 0,
+            "fds": 5,
+            "logical_io": {
+              "cancelled_write_bytes": 0,
+              "rchar": 2905,
+              "read_bytes": 0,
+              "syscr": 19,
+              "syscw": 0,
+              "wchar": 0,
+              "write_bytes": 0
+            },
+            "operations": 1,
+            "peak_rss_mib": 1333.04296875,
+            "rss_change_mib": 0.0,
+            "rss_mib": 1250.5078125,
+            "wall_seconds": 0.0006359000108204782
+          },
+          "unchanged_persistence_including_projection": {
+            "cpu_percent_one_core": 99.11938701049075,
+            "cpu_seconds": 1.432512336000002,
+            "fd_change": 0,
+            "fds": 5,
+            "logical_io": {
+              "cancelled_write_bytes": 0,
+              "rchar": 1690,
+              "read_bytes": 0,
+              "syscr": 4,
+              "syscw": 0,
+              "wchar": 0,
+              "write_bytes": 0
+            },
+            "operations": 1,
+            "peak_rss_mib": 1368.54296875,
+            "rss_change_mib": 13.43359375,
+            "rss_mib": 1263.94140625,
+            "wall_seconds": 1.445239301014226
+          }
+        },
+        "package_path": "/home/kevin/coding/track-codex-sessions/.worktrees/token-cost-reporting/src/codex_time/__init__.py",
+        "package_sha256_end": "96d325073f9635be58dcaa9f6540300b8995fb1ce1963c67d678cb44b39d2772",
+        "package_sha256_start": "96d325073f9635be58dcaa9f6540300b8995fb1ce1963c67d678cb44b39d2772",
+        "parity_counts": {
+          "quota": 285348,
+          "sessions": 5449,
+          "turns": 49885,
+          "usage": 195166
+        },
+        "phase": "cold",
+        "pid": 3402085,
+        "workload_kind": "sanitized synthetic; no live socket or network"
+      },
+      {
+        "backend": "baseline",
+        "build_unchanged_during_measurement": true,
+        "final_resources": {
+          "fds": 5,
+          "io": {
+            "cancelled_write_bytes": 0,
+            "rchar": 3403435098,
+            "read_bytes": 135168,
+            "syscr": 27990,
+            "syscw": 451928,
+            "wchar": 3176623031,
+            "write_bytes": 3433308160
+          },
+          "peak_rss_mib": 1413.24609375,
+          "rss_mib": 1396.7109375
+        },
+        "fixture_sha256": "204b6f1a21a8d4fbc9f0389055d4f09a9384e9a4518fddef9240dbbb0e7ce7c7",
+        "operations": {
+          "active": {
+            "cadence_seconds": 1.0,
+            "cpu_percent_one_core": 81.77380444613819,
+            "cpu_seconds": 254.03947775,
+            "fd_change": 0,
+            "fds": 5,
+            "logical_io": {
+              "cancelled_write_bytes": 0,
+              "rchar": 3124825113,
+              "read_bytes": 131072,
+              "syscr": 4456,
+              "syscw": 386583,
+              "wchar": 3125931169,
+              "write_bytes": 3147153408
+            },
+            "max_update_operation_seconds": 17.281757840013597,
+            "nominal_update_latency_seconds": 1.0,
+            "operations": 84,
+            "peak_rss_mib": 1413.24609375,
+            "requested_seconds": 300.0,
+            "rss_change_mib": 80.5546875,
+            "rss_mib": 1396.7109375,
+            "wall_seconds": 310.6611945850309,
+            "workload": "synthetic five observed roots"
+          },
+          "idle": {
+            "cadence_seconds": 1.0,
+            "cpu_percent_one_core": 96.85694838142953,
+            "cpu_seconds": 291.12087871899996,
+            "fd_change": 0,
+            "fds": 5,
+            "historical_files_unchanged": true,
+            "logical_io": {
+              "cancelled_write_bytes": 0,
+              "rchar": 248333,
+              "read_bytes": 0,
+              "syscr": 3049,
+              "syscw": 19,
+              "wchar": 1197,
+              "write_bytes": 16384
+            },
+            "max_update_operation_seconds": 3.6368570680497214,
+            "nominal_update_latency_seconds": 1.0,
+            "operations": 203,
+            "peak_rss_mib": 1391.74609375,
+            "requested_seconds": 300.0,
+            "rss_change_mib": 9.84765625,
+            "rss_mib": 1318.125,
+            "wall_seconds": 300.56788241205504,
+            "workload": "fixed input"
+          },
+          "restart": {
+            "cpu_percent_one_core": 98.62632402853014,
+            "cpu_seconds": 12.536493876,
+            "fd_change": 1,
+            "fds": 5,
+            "logical_io": {
+              "cancelled_write_bytes": 0,
+              "rchar": 236804879,
+              "read_bytes": 0,
+              "syscr": 19955,
+              "syscw": 0,
+              "wchar": 0,
+              "write_bytes": 0
+            },
+            "operations": 1,
+            "peak_rss_mib": 1183.35546875,
+            "rss_change_mib": 1152.2578125,
+            "rss_mib": 1183.35546875,
+            "wall_seconds": 12.711103247012943
+          }
+        },
+        "package_path": "/home/kevin/coding/track-codex-sessions/.worktrees/token-cost-reporting/src/codex_time/__init__.py",
+        "package_sha256_end": "96d325073f9635be58dcaa9f6540300b8995fb1ce1963c67d678cb44b39d2772",
+        "package_sha256_start": "96d325073f9635be58dcaa9f6540300b8995fb1ce1963c67d678cb44b39d2772",
+        "phase": "steady",
+        "pid": 3408008,
+        "workload_kind": "sanitized synthetic; no live socket or network"
+      }
+    ],
+    "targets": {
+      "idle_cpu_percent": 0.5,
+      "active_cpu_percent": 2.0,
+      "steady_rss_mib": 128.0
+    },
+    "misses_or_unvalidated": [],
+    "artifacts": "/tmp/codex-benchmark-baseline",
+    "notes": [
+      "CPU is per worker, expressed as percent of one core.",
+      "RSS/HWM include worker Python memory; startup/backfill are separate.",
+      "Logical I/O includes /proc measurement reads and progress writes.",
+      "Synthetic workload excludes real sockets and OS notification delivery."
+    ]
+  },
+  "matched_core_1x": {
+    "backend": "optimized",
+    "build_unchanged_during_measurement": true,
+    "cycle_note": "observer/store cycles; socket reconnect is covered by runtime smoke tests",
+    "final_resources": {
+      "fds": 8,
+      "io": {
+        "cancelled_write_bytes": 0,
+        "rchar": 1178788359,
+        "read_bytes": 8192,
+        "syscr": 707001,
+        "syscw": 396649,
+        "wchar": 1040724611,
+        "write_bytes": 875683840
+      },
+      "peak_rss_mib": 64.9140625,
+      "rss_mib": 50.578125
+    },
+    "fixture_sha256": "204b6f1a21a8d4fbc9f0389055d4f09a9384e9a4518fddef9240dbbb0e7ce7c7",
+    "observation_epoch": "2026-10-15T19:59:01+00:00",
+    "operations": {
+      "active": {
+        "cadence_seconds": 60.0,
+        "cpu_percent_one_core": 0.14512577557467848,
+        "cpu_seconds": 0.4353774460000004,
+        "fd_change": 0,
+        "fds": 8,
+        "logical_io": {
+          "cancelled_write_bytes": 0,
+          "rchar": 826230,
+          "read_bytes": 0,
+          "syscr": 4691,
+          "syscw": 900,
+          "wchar": 1948504,
+          "write_bytes": 2355200
+        },
+        "max_update_operation_seconds": 0.1303472279687412,
+        "nominal_update_latency_seconds": 60.0,
+        "operations": 5,
+        "peak_rss_mib": 64.9140625,
+        "phase_wall_seconds": {
+          "index_seconds": 0.0,
+          "persistence_seconds": 0.047874904004856944,
+          "projection_seconds": 0.2316779420361854
+        },
+        "requested_seconds": 300,
+        "rss_change_mib": 0.00390625,
+        "rss_mib": 50.3203125,
+        "wall_seconds": 300.00008218799485,
+        "workload": "synthetic five observed roots"
+      },
+      "idle": {
+        "cadence_seconds": 60.0,
+        "cpu_percent_one_core": 0.01991950088508561,
+        "cpu_seconds": 0.05975852399999937,
+        "fd_change": 0,
+        "fds": 8,
+        "historical_files_unchanged": true,
+        "logical_io": {
+          "cancelled_write_bytes": 0,
+          "rchar": 13838,
+          "read_bytes": 0,
+          "syscr": 54,
+          "syscw": 20,
+          "wchar": 1295,
+          "write_bytes": 65536
+        },
+        "max_update_operation_seconds": 0.0023689590161666274,
+        "nominal_update_latency_seconds": 60.0,
+        "operations": 5,
+        "peak_rss_mib": 64.9140625,
+        "phase_wall_seconds": {
+          "index_seconds": 0.0,
+          "persistence_seconds": 0.0,
+          "projection_seconds": 0.0
+        },
+        "requested_seconds": 300,
+        "rss_change_mib": 0.0,
+        "rss_mib": 50.31640625,
+        "wall_seconds": 300.00010715500684,
+        "workload": "fixed input"
+      },
+      "idle_soak": {
+        "cadence_seconds": 60.0,
+        "cpu_percent_one_core": 44.81013124300473,
+        "cpu_seconds": 3.716999998459869e-06,
+        "fd_change": 0,
+        "fds": 8,
+        "historical_files_unchanged": true,
+        "logical_io": {
+          "cancelled_write_bytes": 0,
+          "rchar": 1688,
+          "read_bytes": 0,
+          "syscr": 4,
+          "syscw": 0,
+          "wchar": 0,
+          "write_bytes": 0
+        },
+        "max_update_operation_seconds": 0,
+        "nominal_update_latency_seconds": 60.0,
+        "operations": 0,
+        "peak_rss_mib": 64.9140625,
+        "phase_wall_seconds": {
+          "index_seconds": 0.0,
+          "persistence_seconds": 0.0,
+          "projection_seconds": 0.0
+        },
+        "requested_seconds": 0,
+        "rss_change_mib": 0.0,
+        "rss_mib": 50.37890625,
+        "wall_seconds": 8.2949991337955e-06,
+        "workload": "fixed input"
+      },
+      "observer_reconnect_cycles": {
+        "cpu_percent_one_core": 86.59476495892943,
+        "cpu_seconds": 14.555149871000001,
+        "fd_change": 0,
+        "fds": 8,
+        "logical_io": {
+          "cancelled_write_bytes": 0,
+          "rchar": 22371926,
+          "read_bytes": 0,
+          "syscr": 165582,
+          "syscw": 24738,
+          "wchar": 58815184,
+          "write_bytes": 64675840
+        },
+        "operations": 100,
+        "peak_rss_mib": 64.9140625,
+        "phase_wall_seconds": {
+          "index_seconds": 0.0,
+          "persistence_seconds": 1.4652042267262004,
+          "projection_seconds": 9.072427041304763
+        },
+        "rss_change_mib": 0.19921875,
+        "rss_mib": 50.578125,
+        "wall_seconds": 16.80834849301027
+      },
+      "restart": {
+        "cpu_percent_one_core": 99.23764389041897,
+        "cpu_seconds": 26.780005453999998,
+        "fd_change": 4,
+        "fds": 8,
+        "logical_io": {
+          "cancelled_write_bytes": 0,
+          "rchar": 1150988432,
+          "read_bytes": 8192,
+          "syscr": 536128,
+          "syscw": 370979,
+          "wchar": 979946980,
+          "write_bytes": 808525824
+        },
+        "operations": 1,
+        "peak_rss_mib": 64.9140625,
+        "phase_wall_seconds": {
+          "index_seconds": 0.0,
+          "persistence_seconds": 0.0,
+          "projection_seconds": 5.844271947280504
+        },
+        "rss_change_mib": 18.8515625,
+        "rss_mib": 50.08203125,
+        "wall_seconds": 26.985732836998068
+      }
+    },
+    "package_path": "/tmp/codex-time-frozen-final-v4/src/codex_time/__init__.py",
+    "package_sha256_end": "d84849e8eaa7fe3b4d489b6a5514d08c766174d5cd49b9bbd05e19168e0b405d",
+    "package_sha256_start": "d84849e8eaa7fe3b4d489b6a5514d08c766174d5cd49b9bbd05e19168e0b405d",
+    "phase": "steady",
+    "pid": 3610711,
+    "workload_kind": "sanitized synthetic; no live socket or network"
+  },
+  "matched_core_10x": {
+    "backend": "optimized",
+    "build_unchanged_during_measurement": true,
+    "cycle_note": "observer/store cycles; socket reconnect is covered by runtime smoke tests",
+    "final_resources": {
+      "fds": 8,
+      "io": {
+        "cancelled_write_bytes": 0,
+        "rchar": 32520749,
+        "read_bytes": 0,
+        "syscr": 172023,
+        "syscw": 25296,
+        "wchar": 59917440,
+        "write_bytes": 66310144
+      },
+      "peak_rss_mib": 45.61328125,
+      "rss_mib": 45.61328125
+    },
+    "fixture_sha256": "6769a15ef9534c3008aefb48c3a5e9adfe3e7e73468ac84a3d29fedc8d924fbd",
+    "observation_epoch": "2026-10-15T19:59:01+00:00",
+    "operations": {
+      "active": {
+        "cadence_seconds": 60.0,
+        "cpu_percent_one_core": 0.15143567241301797,
+        "cpu_seconds": 0.45430718399999925,
+        "fd_change": 0,
+        "fds": 8,
+        "logical_io": {
+          "cancelled_write_bytes": 0,
+          "rchar": 1100084,
+          "read_bytes": 0,
+          "syscr": 4759,
+          "syscw": 877,
+          "wchar": 1899096,
+          "write_bytes": 2326528
+        },
+        "max_update_operation_seconds": 0.1230568719911389,
+        "nominal_update_latency_seconds": 60.0,
+        "operations": 5,
+        "peak_rss_mib": 44.69140625,
+        "phase_wall_seconds": {
+          "index_seconds": 0.0,
+          "persistence_seconds": 0.05125185992801562,
+          "projection_seconds": 0.22520642925519496
+        },
+        "requested_seconds": 300,
+        "rss_change_mib": 0.5078125,
+        "rss_mib": 44.69140625,
+        "wall_seconds": 300.0001101199887,
+        "workload": "synthetic five observed roots"
+      },
+      "idle": {
+        "cadence_seconds": 60.0,
+        "cpu_percent_one_core": 0.020076737445907898,
+        "cpu_seconds": 0.06023022900000008,
+        "fd_change": 0,
+        "fds": 8,
+        "historical_files_unchanged": true,
+        "logical_io": {
+          "cancelled_write_bytes": 0,
+          "rchar": 13815,
+          "read_bytes": 0,
+          "syscr": 54,
+          "syscw": 20,
+          "wchar": 1294,
+          "write_bytes": 57344
+        },
+        "max_update_operation_seconds": 0.00155413500033319,
+        "nominal_update_latency_seconds": 60.0,
+        "operations": 5,
+        "peak_rss_mib": 44.17578125,
+        "phase_wall_seconds": {
+          "index_seconds": 0.0,
+          "persistence_seconds": 0.0,
+          "projection_seconds": 0.0
+        },
+        "requested_seconds": 300,
+        "rss_change_mib": 0.00390625,
+        "rss_mib": 44.17578125,
+        "wall_seconds": 300.0000829929486,
+        "workload": "fixed input"
+      },
+      "idle_soak": {
+        "cadence_seconds": 60.0,
+        "cpu_percent_one_core": 53.41792635339188,
+        "cpu_seconds": 2.7349999989212392e-06,
+        "fd_change": 0,
+        "fds": 8,
+        "historical_files_unchanged": true,
+        "logical_io": {
+          "cancelled_write_bytes": 0,
+          "rchar": 1674,
+          "read_bytes": 0,
+          "syscr": 4,
+          "syscw": 0,
+          "wchar": 0,
+          "write_bytes": 0
+        },
+        "max_update_operation_seconds": 0,
+        "nominal_update_latency_seconds": 60.0,
+        "operations": 0,
+        "peak_rss_mib": 44.75,
+        "phase_wall_seconds": {
+          "index_seconds": 0.0,
+          "persistence_seconds": 0.0,
+          "projection_seconds": 0.0
+        },
+        "requested_seconds": 0,
+        "rss_change_mib": 0.0,
+        "rss_mib": 44.75,
+        "wall_seconds": 5.120004061609507e-06,
+        "workload": "fixed input"
+      },
+      "observer_reconnect_cycles": {
+        "cpu_percent_one_core": 90.04837898513023,
+        "cpu_seconds": 14.011659645000002,
+        "fd_change": 0,
+        "fds": 8,
+        "logical_io": {
+          "cancelled_write_bytes": 0,
+          "rchar": 22232648,
+          "read_bytes": 0,
+          "syscr": 165548,
+          "syscw": 24384,
+          "wchar": 58016678,
+          "write_bytes": 63873024
+        },
+        "operations": 100,
+        "peak_rss_mib": 45.61328125,
+        "phase_wall_seconds": {
+          "index_seconds": 0.0,
+          "persistence_seconds": 1.356631592148915,
+          "projection_seconds": 8.264447939000092
+        },
+        "rss_change_mib": 0.86328125,
+        "rss_mib": 45.61328125,
+        "wall_seconds": 15.56014644895913
+      },
+      "restart": {
+        "cpu_percent_one_core": 99.54126534591464,
+        "cpu_seconds": 1.1733550990000001,
+        "fd_change": 4,
+        "fds": 8,
+        "logical_io": {
+          "cancelled_write_bytes": 0,
+          "rchar": 4587582,
+          "read_bytes": 0,
+          "syscr": 1131,
+          "syscw": 9,
+          "wchar": 49,
+          "write_bytes": 32768
+        },
+        "operations": 1,
+        "peak_rss_mib": 42.8515625,
+        "phase_wall_seconds": {
+          "index_seconds": 0.0,
+          "persistence_seconds": 0.0,
+          "projection_seconds": 0.0
+        },
+        "rss_change_mib": 11.546875,
+        "rss_mib": 42.8515625,
+        "wall_seconds": 1.1787624910357408
+      }
+    },
+    "package_path": "/tmp/codex-time-frozen-final-v4/src/codex_time/__init__.py",
+    "package_sha256_end": "d84849e8eaa7fe3b4d489b6a5514d08c766174d5cd49b9bbd05e19168e0b405d",
+    "package_sha256_start": "d84849e8eaa7fe3b4d489b6a5514d08c766174d5cd49b9bbd05e19168e0b405d",
+    "phase": "steady",
+    "pid": 3610376,
+    "workload_kind": "sanitized synthetic; no live socket or network"
+  },
+  "soak": {
+    "scope": "Frozen v3 steady loop unchanged by v4 recovery guard and v5 startup-only bootstrap; only idle/soak used. Old active/cycles replayed existing evidence.",
+    "fixture_sha256": "204b6f1a21a8d4fbc9f0389055d4f09a9384e9a4518fddef9240dbbb0e7ce7c7",
+    "package_sha256": "e05442a546b8102556910699236042924629eebfe11b4c9478aa77af8b22d546",
+    "measurement": {
+      "cadence_seconds": 60.0,
+      "cpu_percent_one_core": 0.02153124485437537,
+      "cpu_seconds": 0.3875624290000008,
+      "fd_change": 0,
+      "fds": 8,
+      "historical_files_unchanged": true,
+      "logical_io": {
+        "cancelled_write_bytes": 0,
+        "rchar": 74572,
+        "read_bytes": 0,
+        "syscr": 304,
+        "syscw": 120,
+        "wchar": 8614,
+        "write_bytes": 425984
+      },
+      "max_update_operation_seconds": 0.00220832898048684,
+      "nominal_update_latency_seconds": 60.0,
+      "operations": 30,
+      "peak_rss_mib": 42.2421875,
+      "phase_wall_seconds": {
+        "index_seconds": 0.0,
+        "persistence_seconds": 0.0,
+        "projection_seconds": 0.0
+      },
+      "requested_seconds": 1800,
+      "rss_change_mib": 0.0,
+      "rss_mib": 42.2421875,
+      "wall_seconds": 1800.000100417994,
+      "workload": "fixed input"
+    }
+  },
+  "earlier_cold_1x": [
+    {
+      "backend": "optimized",
+      "backup_verified": true,
+      "build_unchanged_during_measurement": true,
+      "fixture_sha256": "204b6f1a21a8d4fbc9f0389055d4f09a9384e9a4518fddef9240dbbb0e7ce7c7",
+      "operations": {
+        "cold_start": {
+          "cpu_percent_one_core": 32.17242279167282,
+          "cpu_seconds": 61.424346721,
+          "fd_change": 4,
+          "fds": 8,
+          "logical_io": {
+            "cancelled_write_bytes": 0,
+            "rchar": 1186301755,
+            "read_bytes": 561152,
+            "syscr": 224599,
+            "syscw": 368587,
+            "wchar": 843733366,
+            "write_bytes": 1200963584
+          },
+          "operations": 1,
+          "peak_rss_mib": 48.21484375,
+          "phase_wall_seconds": {
+            "index_seconds": 0.0,
+            "persistence_seconds": 0.0,
+            "projection_seconds": 158.01189522614004
+          },
+          "rss_change_mib": 17.08203125,
+          "rss_mib": 48.21484375,
+          "wall_seconds": 190.92235334200086
+        },
+        "history_and_backup_verification": {
+          "cpu_percent_one_core": 99.54476619880668,
+          "cpu_seconds": 1.5889213330000018,
+          "fd_change": 0,
+          "fds": 8,
+          "logical_io": {
+            "cancelled_write_bytes": 0,
+            "rchar": 192597916,
+            "read_bytes": 0,
+            "syscr": 27098,
+            "syscw": 0,
+            "wchar": 0,
+            "write_bytes": 0
+          },
+          "operations": 1,
+          "peak_rss_mib": 48.453125,
+          "phase_wall_seconds": {
+            "index_seconds": 0.0,
+            "persistence_seconds": 0.0,
+            "projection_seconds": 0.0
+          },
+          "rss_change_mib": -0.7578125,
+          "rss_mib": 47.69921875,
+          "wall_seconds": 1.5961877190275118
+        },
+        "ingestion": {
+          "cpu_percent_one_core": 99.61589584102694,
+          "cpu_seconds": 0.003978103999997984,
+          "fd_change": 0,
+          "fds": 8,
+          "logical_io": {
+            "cancelled_write_bytes": 0,
+            "rchar": 52069,
+            "read_bytes": 0,
+            "syscr": 38,
+            "syscw": 0,
+            "wchar": 0,
+            "write_bytes": 0
+          },
+          "operations": 1,
+          "peak_rss_mib": 48.39453125,
+          "phase_wall_seconds": {
+            "index_seconds": 0.0,
+            "persistence_seconds": 0.0,
+            "projection_seconds": 0.0
+          },
+          "rss_change_mib": 0.1796875,
+          "rss_mib": 48.39453125,
+          "wall_seconds": 0.003993442980572581
+        },
+        "observation": {
+          "cpu_percent_one_core": 99.2293374645452,
+          "cpu_seconds": 0.00026820299999741337,
+          "fd_change": 0,
+          "fds": 8,
+          "logical_io": {
+            "cancelled_write_bytes": 0,
+            "rchar": 1695,
+            "read_bytes": 0,
+            "syscr": 4,
+            "syscw": 0,
+            "wchar": 0,
+            "write_bytes": 0
+          },
+          "operations": 2,
+          "peak_rss_mib": 48.3984375,
+          "phase_wall_seconds": {
+            "index_seconds": 0.0,
+            "persistence_seconds": 0.0,
+            "projection_seconds": 0.0
+          },
+          "rss_change_mib": 0.00390625,
+          "rss_mib": 48.3984375,
+          "wall_seconds": 0.0002702859928831458
+        },
+        "persistence_including_projection": {
+          "cpu_percent_one_core": 29.875551922175823,
+          "cpu_seconds": 0.029765441999998643,
+          "fd_change": 0,
+          "fds": 8,
+          "logical_io": {
+            "cancelled_write_bytes": 0,
+            "rchar": 198575,
+            "read_bytes": 0,
+            "syscr": 169,
+            "syscw": 165,
+            "wchar": 338836,
+            "write_bytes": 425984
+          },
+          "operations": 1,
+          "peak_rss_mib": 48.45703125,
+          "phase_wall_seconds": {
+            "index_seconds": 0.0,
+            "persistence_seconds": 0.05697337299352512,
+            "projection_seconds": 0.016642113972920924
+          },
+          "rss_change_mib": 0.05859375,
+          "rss_mib": 48.45703125,
+          "wall_seconds": 0.09963143803179264
+        },
+        "unchanged_ingestion": {
+          "cpu_percent_one_core": 72.12480037406804,
+          "cpu_seconds": 0.0005995849999962388,
+          "fd_change": 0,
+          "fds": 8,
+          "logical_io": {
+            "cancelled_write_bytes": 0,
+            "rchar": 1695,
+            "read_bytes": 0,
+            "syscr": 4,
+            "syscw": 0,
+            "wchar": 0,
+            "write_bytes": 0
+          },
+          "operations": 1,
+          "peak_rss_mib": 48.45703125,
+          "phase_wall_seconds": {
+            "index_seconds": 0.0,
+            "persistence_seconds": 0.0,
+            "projection_seconds": 0.0
+          },
+          "rss_change_mib": 0.0,
+          "rss_mib": 48.45703125,
+          "wall_seconds": 0.0008313159924000502
+        },
+        "unchanged_persistence_including_projection": {
+          "cpu_percent_one_core": 99.77488214347622,
+          "cpu_seconds": 0.001023379999999463,
+          "fd_change": 0,
+          "fds": 8,
+          "logical_io": {
+            "cancelled_write_bytes": 0,
+            "rchar": 1695,
+            "read_bytes": 0,
+            "syscr": 4,
+            "syscw": 0,
+            "wchar": 0,
+            "write_bytes": 0
+          },
+          "operations": 1,
+          "peak_rss_mib": 48.45703125,
+          "phase_wall_seconds": {
+            "index_seconds": 0.0,
+            "persistence_seconds": 0.0,
+            "projection_seconds": 0.0
+          },
+          "rss_change_mib": 0.0,
+          "rss_mib": 48.45703125,
+          "wall_seconds": 0.0010256890091113746
+        }
+      },
+      "package_path": "/tmp/codex-time-perf-build/src/codex_time/__init__.py",
+      "package_sha256_end": "cf10253faeca3685ead9a77f4c52d3f4519c0e95c679c2b9247c0533eb5f4507",
+      "package_sha256_start": "cf10253faeca3685ead9a77f4c52d3f4519c0e95c679c2b9247c0533eb5f4507",
+      "parity_counts": {
+        "quota": 285348,
+        "sessions": 5449,
+        "turns": 49885,
+        "usage": 195166
+      },
+      "phase": "cold",
+      "pid": 3401654,
+      "projection_note": "phase_wall_seconds separates internal persistence/projection/index; CPU and I/O measure their aggregate",
+      "workload_kind": "sanitized synthetic; no live socket or network"
+    },
+    {
+      "backend": "optimized",
+      "build_unchanged_during_measurement": true,
+      "cycle_note": "observer/store cycles; socket reconnect is covered by runtime smoke tests",
+      "final_resources": {
+        "fds": 8,
+        "io": {
+          "cancelled_write_bytes": 0,
+          "rchar": 15155860,
+          "read_bytes": 21127168,
+          "syscr": 65585,
+          "syscw": 20172,
+          "wchar": 44418456,
+          "write_bytes": 50749440
+        },
+        "peak_rss_mib": 48.0703125,
+        "rss_mib": 45.1796875
+      },
+      "fixture_sha256": "204b6f1a21a8d4fbc9f0389055d4f09a9384e9a4518fddef9240dbbb0e7ce7c7",
+      "operations": {
+        "active": {
+          "cadence_seconds": 60.0,
+          "cpu_percent_one_core": 0.06529099222516997,
+          "cpu_seconds": 0.19587360199999893,
+          "fd_change": 0,
+          "fds": 8,
+          "logical_io": {
+            "cancelled_write_bytes": 0,
+            "rchar": 462386,
+            "read_bytes": 0,
+            "syscr": 753,
+            "syscw": 792,
+            "wchar": 1606412,
+            "write_bytes": 1990656
+          },
+          "max_update_operation_seconds": 0.11476768704596907,
+          "nominal_update_latency_seconds": 60.0,
+          "operations": 5,
+          "peak_rss_mib": 47.20703125,
+          "phase_wall_seconds": {
+            "index_seconds": 0.0,
+            "persistence_seconds": 0.09512800513766706,
+            "projection_seconds": 0.1029225182137452
+          },
+          "requested_seconds": 300.0,
+          "rss_change_mib": 0.37890625,
+          "rss_mib": 44.45703125,
+          "wall_seconds": 300.0009577500168,
+          "workload": "synthetic five observed roots"
+        },
+        "idle": {
+          "cadence_seconds": 60.0,
+          "cpu_percent_one_core": 0.019405354953457136,
+          "cpu_seconds": 0.05821608100000031,
+          "fd_change": 0,
+          "fds": 8,
+          "historical_files_unchanged": true,
+          "logical_io": {
+            "cancelled_write_bytes": 0,
+            "rchar": 1665,
+            "read_bytes": 0,
+            "syscr": 4,
+            "syscw": 20,
+            "wchar": 1294,
+            "write_bytes": 16384
+          },
+          "max_update_operation_seconds": 0.0011352240107953548,
+          "nominal_update_latency_seconds": 60.0,
+          "operations": 5,
+          "peak_rss_mib": 47.20703125,
+          "phase_wall_seconds": {
+            "index_seconds": 0.0,
+            "persistence_seconds": 0.0,
+            "projection_seconds": 0.0
+          },
+          "requested_seconds": 300.0,
+          "rss_change_mib": 0.0078125,
+          "rss_mib": 43.4609375,
+          "wall_seconds": 300.0000831710058,
+          "workload": "fixed input"
+        },
+        "idle_soak": {
+          "cadence_seconds": 60.0,
+          "cpu_percent_one_core": 0.019884231213473255,
+          "cpu_seconds": 0.35791619799999985,
+          "fd_change": 0,
+          "fds": 8,
+          "historical_files_unchanged": true,
+          "logical_io": {
+            "cancelled_write_bytes": 0,
+            "rchar": 1675,
+            "read_bytes": 20480,
+            "syscr": 4,
+            "syscw": 120,
+            "wchar": 8614,
+            "write_bytes": 81920
+          },
+          "max_update_operation_seconds": 0.005068100988864899,
+          "nominal_update_latency_seconds": 60.0,
+          "operations": 30,
+          "peak_rss_mib": 48.0703125,
+          "phase_wall_seconds": {
+            "index_seconds": 0.0,
+            "persistence_seconds": 0.0,
+            "projection_seconds": 0.0
+          },
+          "requested_seconds": 1800.0,
+          "rss_change_mib": 0.0,
+          "rss_mib": 45.14453125,
+          "wall_seconds": 1800.000181839976,
+          "workload": "fixed input"
+        },
+        "observer_reconnect_cycles": {
+          "cpu_percent_one_core": 79.92794278808685,
+          "cpu_seconds": 6.7642072570000025,
+          "fd_change": 0,
+          "fds": 8,
+          "logical_io": {
+            "cancelled_write_bytes": 0,
+            "rchar": 9690404,
+            "read_bytes": 1970176,
+            "syscr": 64186,
+            "syscw": 19225,
+            "wchar": 42801756,
+            "write_bytes": 48623616
+          },
+          "operations": 100,
+          "peak_rss_mib": 48.0703125,
+          "phase_wall_seconds": {
+            "index_seconds": 0.0,
+            "persistence_seconds": 1.2152493363246322,
+            "projection_seconds": 3.8360653476556763
+          },
+          "rss_change_mib": 0.03515625,
+          "rss_mib": 45.1796875,
+          "wall_seconds": 8.46288171701599
+        },
+        "restart": {
+          "cpu_percent_one_core": 98.55664742292691,
+          "cpu_seconds": 0.143628873,
+          "fd_change": 4,
+          "fds": 8,
+          "logical_io": {
+            "cancelled_write_bytes": 0,
+            "rchar": 557672,
+            "read_bytes": 0,
+            "syscr": 149,
+            "syscw": 9,
+            "wchar": 49,
+            "write_bytes": 32768
+          },
+          "operations": 1,
+          "peak_rss_mib": 33.7734375,
+          "phase_wall_seconds": {
+            "index_seconds": 0.0,
+            "persistence_seconds": 0.0,
+            "projection_seconds": 0.0
+          },
+          "rss_change_mib": 2.67578125,
+          "rss_mib": 33.7734375,
+          "wall_seconds": 0.14573230396490544
+        }
+      },
+      "package_path": "/tmp/codex-time-perf-build/src/codex_time/__init__.py",
+      "package_sha256_end": "cf10253faeca3685ead9a77f4c52d3f4519c0e95c679c2b9247c0533eb5f4507",
+      "package_sha256_start": "cf10253faeca3685ead9a77f4c52d3f4519c0e95c679c2b9247c0533eb5f4507",
+      "phase": "steady",
+      "pid": 3407919,
+      "workload_kind": "sanitized synthetic; no live socket or network"
+    }
+  ],
+  "earlier_cold_10x": [
+    {
+      "backend": "optimized",
+      "backup_verified": true,
+      "build_unchanged_during_measurement": true,
+      "fixture_sha256": "6769a15ef9534c3008aefb48c3a5e9adfe3e7e73468ac84a3d29fedc8d924fbd",
+      "operations": {
+        "cold_start": {
+          "cpu_percent_one_core": 37.895961776447116,
+          "cpu_seconds": 634.313383749,
+          "fd_change": 4,
+          "fds": 8,
+          "logical_io": {
+            "cancelled_write_bytes": 0,
+            "rchar": 14284341601,
+            "read_bytes": 2893639680,
+            "syscr": 2836722,
+            "syscw": 4250379,
+            "wchar": 10749664864,
+            "write_bytes": 13723512832
+          },
+          "operations": 1,
+          "peak_rss_mib": 120.52734375,
+          "phase_wall_seconds": {
+            "index_seconds": 0.0,
+            "persistence_seconds": 0.0,
+            "projection_seconds": 1239.8041259009624
+          },
+          "rss_change_mib": 89.39453125,
+          "rss_mib": 120.52734375,
+          "wall_seconds": 1673.8284345199936
+        },
+        "history_and_backup_verification": {
+          "cpu_percent_one_core": 89.36592949779639,
+          "cpu_seconds": 16.27679961800004,
+          "fd_change": 0,
+          "fds": 8,
+          "logical_io": {
+            "cancelled_write_bytes": 0,
+            "rchar": 1926638952,
+            "read_bytes": 1114648576,
+            "syscr": 271017,
+            "syscw": 1,
+            "wchar": 72,
+            "write_bytes": 4096
+          },
+          "operations": 1,
+          "peak_rss_mib": 121.54296875,
+          "phase_wall_seconds": {
+            "index_seconds": 0.0,
+            "persistence_seconds": 0.0,
+            "projection_seconds": 0.0
+          },
+          "rss_change_mib": 0.7734375,
+          "rss_mib": 121.54296875,
+          "wall_seconds": 18.213652238016948
+        },
+        "ingestion": {
+          "cpu_percent_one_core": 83.31660704936226,
+          "cpu_seconds": 0.006034670999952141,
+          "fd_change": 0,
+          "fds": 8,
+          "logical_io": {
+            "cancelled_write_bytes": 0,
+            "rchar": 56177,
+            "read_bytes": 61440,
+            "syscr": 39,
+            "syscw": 0,
+            "wchar": 0,
+            "write_bytes": 0
+          },
+          "operations": 1,
+          "peak_rss_mib": 120.70703125,
+          "phase_wall_seconds": {
+            "index_seconds": 0.0,
+            "persistence_seconds": 0.0,
+            "projection_seconds": 0.0
+          },
+          "rss_change_mib": 0.1796875,
+          "rss_mib": 120.70703125,
+          "wall_seconds": 0.0072430589934811
+        },
+        "observation": {
+          "cpu_percent_one_core": 99.03197403442111,
+          "cpu_seconds": 0.00019969499999206164,
+          "fd_change": 0,
+          "fds": 8,
+          "logical_io": {
+            "cancelled_write_bytes": 0,
+            "rchar": 1707,
+            "read_bytes": 0,
+            "syscr": 4,
+            "syscw": 0,
+            "wchar": 0,
+            "write_bytes": 0
+          },
+          "operations": 2,
+          "peak_rss_mib": 120.7109375,
+          "phase_wall_seconds": {
+            "index_seconds": 0.0,
+            "persistence_seconds": 0.0,
+            "projection_seconds": 0.0
+          },
+          "rss_change_mib": 0.0,
+          "rss_mib": 120.7109375,
+          "wall_seconds": 0.00020164699526503682
+        },
+        "persistence_including_projection": {
+          "cpu_percent_one_core": 46.657339193544026,
+          "cpu_seconds": 0.026704733999963537,
+          "fd_change": 0,
+          "fds": 8,
+          "logical_io": {
+            "cancelled_write_bytes": 0,
+            "rchar": 534459,
+            "read_bytes": 720896,
+            "syscr": 251,
+            "syscw": 175,
+            "wchar": 359436,
+            "write_bytes": 446464
+          },
+          "operations": 1,
+          "peak_rss_mib": 120.76953125,
+          "phase_wall_seconds": {
+            "index_seconds": 0.0,
+            "persistence_seconds": 0.00987438199808821,
+            "projection_seconds": 0.029007713950704783
+          },
+          "rss_change_mib": 0.0546875,
+          "rss_mib": 120.76953125,
+          "wall_seconds": 0.05723586998647079
+        },
+        "unchanged_ingestion": {
+          "cpu_percent_one_core": 89.21755634849123,
+          "cpu_seconds": 0.00037461199997324,
+          "fd_change": 0,
+          "fds": 8,
+          "logical_io": {
+            "cancelled_write_bytes": 0,
+            "rchar": 1707,
+            "read_bytes": 0,
+            "syscr": 4,
+            "syscw": 0,
+            "wchar": 0,
+            "write_bytes": 0
+          },
+          "operations": 1,
+          "peak_rss_mib": 120.76953125,
+          "phase_wall_seconds": {
+            "index_seconds": 0.0,
+            "persistence_seconds": 0.0,
+            "projection_seconds": 0.0
+          },
+          "rss_change_mib": 0.0,
+          "rss_mib": 120.76953125,
+          "wall_seconds": 0.0004198859678581357
+        },
+        "unchanged_persistence_including_projection": {
+          "cpu_percent_one_core": 99.77284522384491,
+          "cpu_seconds": 0.0008564959999830535,
+          "fd_change": 0,
+          "fds": 8,
+          "logical_io": {
+            "cancelled_write_bytes": 0,
+            "rchar": 1707,
+            "read_bytes": 0,
+            "syscr": 4,
+            "syscw": 0,
+            "wchar": 0,
+            "write_bytes": 0
+          },
+          "operations": 1,
+          "peak_rss_mib": 120.76953125,
+          "phase_wall_seconds": {
+            "index_seconds": 0.0,
+            "persistence_seconds": 0.0,
+            "projection_seconds": 0.0
+          },
+          "rss_change_mib": 0.0,
+          "rss_mib": 120.76953125,
+          "wall_seconds": 0.0008584460010752082
+        }
+      },
+      "package_path": "/tmp/codex-time-perf-build/src/codex_time/__init__.py",
+      "package_sha256_end": "cf10253faeca3685ead9a77f4c52d3f4519c0e95c679c2b9247c0533eb5f4507",
+      "package_sha256_start": "cf10253faeca3685ead9a77f4c52d3f4519c0e95c679c2b9247c0533eb5f4507",
+      "parity_counts": {
+        "quota": 2853480,
+        "sessions": 54490,
+        "turns": 498850,
+        "usage": 1951660
+      },
+      "phase": "cold",
+      "pid": 3403301,
+      "projection_note": "phase_wall_seconds separates internal persistence/projection/index; CPU and I/O measure their aggregate",
+      "workload_kind": "sanitized synthetic; no live socket or network"
+    },
+    {
+      "backend": "optimized",
+      "build_unchanged_during_measurement": true,
+      "cycle_note": "observer/store cycles; socket reconnect is covered by runtime smoke tests",
+      "final_resources": {
+        "fds": 8,
+        "io": {
+          "cancelled_write_bytes": 0,
+          "rchar": 19317437,
+          "read_bytes": 172032,
+          "syscr": 66601,
+          "syscw": 19932,
+          "wchar": 44138572,
+          "write_bytes": 50552832
+        },
+        "peak_rss_mib": 179.12890625,
+        "rss_mib": 126.40234375
+      },
+      "fixture_sha256": "6769a15ef9534c3008aefb48c3a5e9adfe3e7e73468ac84a3d29fedc8d924fbd",
+      "operations": {
+        "active": {
+          "cadence_seconds": 60.0,
+          "cpu_percent_one_core": 0.06354891699020307,
+          "cpu_seconds": 0.19064682500000174,
+          "fd_change": 0,
+          "fds": 8,
+          "logical_io": {
+            "cancelled_write_bytes": 0,
+            "rchar": 601658,
+            "read_bytes": 0,
+            "syscr": 787,
+            "syscw": 786,
+            "wchar": 1594052,
+            "write_bytes": 2035712
+          },
+          "max_update_operation_seconds": 0.05354243697365746,
+          "nominal_update_latency_seconds": 60.0,
+          "operations": 5,
+          "peak_rss_mib": 178.3046875,
+          "phase_wall_seconds": {
+            "index_seconds": 0.0,
+            "persistence_seconds": 0.05572540598222986,
+            "projection_seconds": 0.06441366323269904
+          },
+          "requested_seconds": 300.0,
+          "rss_change_mib": 0.3828125,
+          "rss_mib": 126.9921875,
+          "wall_seconds": 300.0001164919813,
+          "workload": "synthetic five observed roots"
+        },
+        "idle": {
+          "cadence_seconds": 60.0,
+          "cpu_percent_one_core": 0.020058155120049714,
+          "cpu_seconds": 0.06017447800000042,
+          "fd_change": 0,
+          "fds": 8,
+          "historical_files_unchanged": true,
+          "logical_io": {
+            "cancelled_write_bytes": 0,
+            "rchar": 1672,
+            "read_bytes": 0,
+            "syscr": 4,
+            "syscw": 20,
+            "wchar": 1296,
+            "write_bytes": 69632
+          },
+          "max_update_operation_seconds": 0.0015128999948501587,
+          "nominal_update_latency_seconds": 60.0,
+          "operations": 5,
+          "peak_rss_mib": 177.515625,
+          "phase_wall_seconds": {
+            "index_seconds": 0.0,
+            "persistence_seconds": 0.0,
+            "projection_seconds": 0.0
+          },
+          "requested_seconds": 300.0,
+          "rss_change_mib": 0.0,
+          "rss_mib": 116.6875,
+          "wall_seconds": 300.00006301602116,
+          "workload": "fixed input"
+        },
+        "idle_soak": {
+          "cadence_seconds": 60.0,
+          "cpu_percent_one_core": 58.595424217672544,
+          "cpu_seconds": 3.4870000007458657e-06,
+          "fd_change": 0,
+          "fds": 8,
+          "historical_files_unchanged": true,
+          "logical_io": {
+            "cancelled_write_bytes": 0,
+            "rchar": 1679,
+            "read_bytes": 0,
+            "syscr": 4,
+            "syscw": 0,
+            "wchar": 0,
+            "write_bytes": 0
+          },
+          "max_update_operation_seconds": 0,
+          "nominal_update_latency_seconds": 60.0,
+          "operations": 0,
+          "peak_rss_mib": 179.12890625,
+          "phase_wall_seconds": {
+            "index_seconds": 0.0,
+            "persistence_seconds": 0.0,
+            "projection_seconds": 0.0
+          },
+          "requested_seconds": 0.0,
+          "rss_change_mib": 0.0,
+          "rss_mib": 126.3671875,
+          "wall_seconds": 5.950976628810167e-06,
+          "workload": "fixed input"
+        },
+        "observer_reconnect_cycles": {
+          "cpu_percent_one_core": 80.48875618281363,
+          "cpu_seconds": 6.538511136000011,
+          "fd_change": 0,
+          "fds": 8,
+          "logical_io": {
+            "cancelled_write_bytes": 0,
+            "rchar": 9686305,
+            "read_bytes": 0,
+            "syscr": 64185,
+            "syscw": 19102,
+            "wchar": 42542268,
+            "write_bytes": 48369664
+          },
+          "operations": 100,
+          "peak_rss_mib": 179.12890625,
+          "phase_wall_seconds": {
+            "index_seconds": 0.0,
+            "persistence_seconds": 1.1227029069559649,
+            "projection_seconds": 3.7384281788254157
+          },
+          "rss_change_mib": 0.03515625,
+          "rss_mib": 126.40234375,
+          "wall_seconds": 8.123508731019683
+        },
+        "restart": {
+          "cpu_percent_one_core": 99.6713631614684,
+          "cpu_seconds": 1.218622734,
+          "fd_change": 4,
+          "fds": 8,
+          "logical_io": {
+            "cancelled_write_bytes": 0,
+            "rchar": 4579951,
+            "read_bytes": 45056,
+            "syscr": 1131,
+            "syscw": 9,
+            "wchar": 49,
+            "write_bytes": 32768
+          },
+          "operations": 1,
+          "peak_rss_mib": 42.6640625,
+          "phase_wall_seconds": {
+            "index_seconds": 0.0,
+            "persistence_seconds": 0.0,
+            "projection_seconds": 0.0
+          },
+          "rss_change_mib": 11.55078125,
+          "rss_mib": 42.6640625,
+          "wall_seconds": 1.2226407820126042
+        }
+      },
+      "package_path": "/tmp/codex-time-perf-build/src/codex_time/__init__.py",
+      "package_sha256_end": "cf10253faeca3685ead9a77f4c52d3f4519c0e95c679c2b9247c0533eb5f4507",
+      "package_sha256_start": "cf10253faeca3685ead9a77f4c52d3f4519c0e95c679c2b9247c0533eb5f4507",
+      "phase": "steady",
+      "pid": 3455244,
+      "workload_kind": "sanitized synthetic; no live socket or network"
+    }
+  ],
+  "intermediate_packaged_v4": {
+    "build": {
+      "package_path": "/tmp/codex-time-final-packaged-v4/lib/python3.12/site-packages/codex_time",
+      "sha256": "d84849e8eaa7fe3b4d489b6a5514d08c766174d5cd49b9bbd05e19168e0b405d",
+      "installed_package": true
+    },
+    "executable": "/tmp/codex-time-final-packaged-v4/bin/codex-time",
+    "sample_seconds": 60,
+    "observed_roots": 5,
+    "work_dir": "/tmp/codex-time-final-service-v4",
+    "metadata_fixture": {
+      "threads": 5449,
+      "turns": 49885,
+      "names": 5449
+    },
+    "startup": {
+      "wall_seconds": 158.72513799299486,
+      "daemon": {
+        "cpu_seconds": 68.59,
+        "rss_mib": 56.34765625,
+        "peak_rss_mib": 56.34765625,
+        "fds": 13,
+        "logical_io": {
+          "rchar": 1269168499,
+          "wchar": 853660911,
+          "syscr": 251267,
+          "syscw": 371856,
+          "read_bytes": 16384,
+          "write_bytes": 1207234560,
+          "cancelled_write_bytes": 0
+        }
+      }
+    },
+    "active": {
+      "requested_seconds": 300.0,
+      "wall_seconds": 300.0015369919711,
+      "processes": {
+        "daemon": {
+          "cpu_seconds": 0.4299999999999926,
+          "rss_mib": 56.421875,
+          "peak_rss_mib": 56.421875,
+          "fds": 13,
+          "logical_io": {
+            "rchar": 5001816,
+            "wchar": 1937633,
+            "syscr": 2263,
+            "syscw": 940,
+            "read_bytes": 0,
+            "write_bytes": 2420736,
+            "cancelled_write_bytes": 0
+          },
+          "fd_change": 0
+        },
+        "mock_server_and_harness": {
+          "cpu_seconds": 0.29000000000000004,
+          "rss_mib": 30.55859375,
+          "peak_rss_mib": 31.4296875,
+          "fds": 11,
+          "logical_io": {
+            "rchar": 1199841,
+            "wchar": 1420,
+            "syscr": 3612,
+            "syscw": 20,
+            "read_bytes": 0,
+            "write_bytes": 73728,
+            "cancelled_write_bytes": 0
+          },
+          "fd_change": 0
+        }
+      },
+      "aggregate": {
+        "cpu_seconds": 0.7199999999999926,
+        "cpu_percent_one_core": 0.23999877041272025,
+        "rss_mib": 86.98046875,
+        "peak_sampled_rss_mib": 86.98046875,
+        "peak_rss_mib": 87.8515625,
+        "fds": 24,
+        "logical_io": {
+          "rchar": 6201657,
+          "wchar": 1939053,
+          "syscr": 5875,
+          "syscw": 960,
+          "read_bytes": 0,
+          "write_bytes": 2494464,
+          "cancelled_write_bytes": 0
+        }
+      }
+    },
+    "idle": {
+      "requested_seconds": 300.0,
+      "wall_seconds": 300.00192151998635,
+      "processes": {
+        "daemon": {
+          "cpu_seconds": 0.29999999999999716,
+          "rss_mib": 56.42578125,
+          "peak_rss_mib": 56.42578125,
+          "fds": 12,
+          "logical_io": {
+            "rchar": 4896664,
+            "wchar": 307784,
+            "syscr": 1760,
+            "syscw": 151,
+            "read_bytes": 0,
+            "write_bytes": 434176,
+            "cancelled_write_bytes": 0
+          },
+          "fd_change": 0
+        },
+        "mock_server_and_harness": {
+          "cpu_seconds": 0.28,
+          "rss_mib": 30.55859375,
+          "peak_rss_mib": 31.4296875,
+          "fds": 11,
+          "logical_io": {
+            "rchar": 1199880,
+            "wchar": 1240,
+            "syscr": 3612,
+            "syscw": 20,
+            "read_bytes": 0,
+            "write_bytes": 81920,
+            "cancelled_write_bytes": 0
+          },
+          "fd_change": 0
+        }
+      },
+      "aggregate": {
+        "cpu_seconds": 0.5799999999999972,
+        "cpu_percent_one_core": 0.19333209502838372,
+        "rss_mib": 86.984375,
+        "peak_sampled_rss_mib": 86.984375,
+        "peak_rss_mib": 87.85546875,
+        "fds": 23,
+        "logical_io": {
+          "rchar": 6096544,
+          "wchar": 309024,
+          "syscr": 5372,
+          "syscw": 171,
+          "read_bytes": 0,
+          "write_bytes": 516096,
+          "cancelled_write_bytes": 0
+        }
+      }
+    },
+    "cycles": {
+      "waiting_observed": true,
+      "unknown_observed": true,
+      "reconnected": true
+    },
+    "runtime_uncertainty_seconds": 60.00017271301476,
+    "health_at_65_seconds": {
+      "daemon": "running",
+      "heartbeat": "2026-10-14T20:09:30.804812+00:00",
+      "pid": 3579281,
+      "live_diagnostic": null,
+      "data_dir": "/tmp/codex-time-final-service-v4/data",
+      "state_dir": "/tmp/codex-time-final-service-v4/health-probe",
+      "sampling_interval_seconds": 60.0,
+      "notification_mode": "inotify",
+      "sessions": 5449,
+      "diagnostics": [
+        "Codex observation unavailable (ConnectionClosedOK)"
+      ]
+    },
+    "completion_timestamp": "2026-10-14T20:10:36.110688+00:00",
+    "daemon_exit_status": 0,
+    "evidence": {
+      "precise_wait_seconds": 2.125,
+      "lifecycle_preserved": true,
+      "token_journals_unchanged": true,
+      "sampling_quality": [
+        "historical_upper_bound",
+        "observation_gap",
+        "sampled_waits_60s",
+        "unfinished_observed_only"
+      ]
+    },
+    "rpc_counts": {
+      "initialize": 2,
+      "initialized": 2,
+      "thread/loaded/list": 15,
+      "thread/read": 70
+    },
+    "connections": 2,
+    "max_poll_interval_seconds": 120.06472030305304,
+    "unvalidated_or_misses": [],
+    "notes": [
+      "Aggregate includes daemon and mock-server harness process.",
+      "Startup/backfill resources are separate from the active window.",
+      "OS notification ingestion and actual Unix reconnect are exercised.",
+      "The health freshness probe uses a separate disposable runtime directory."
+    ]
+  },
+  "final_packaged_v5": {
+    "build": {
+      "package_path": "/tmp/codex-time-final-packaged-v5/lib/python3.12/site-packages/codex_time",
+      "sha256": "e6d60d29a03cd2f43c62c0ea272c5ecc19cc4f293ea5d87e80ec61f6784d254e",
+      "installed_package": true
+    },
+    "executable": "/tmp/codex-time-final-packaged-v5/bin/codex-time",
+    "sample_seconds": 60,
+    "observed_roots": 5,
+    "work_dir": "/tmp/codex-time-final-service-v5",
+    "metadata_fixture": {
+      "threads": 5449,
+      "turns": 49885,
+      "names": 5449
+    },
+    "startup": {
+      "wall_seconds": 111.4705529580242,
+      "daemon": {
+        "cpu_seconds": 47.18,
+        "self_cpu_seconds": 4.06,
+        "children_cpu_seconds": 43.12,
+        "rss_mib": 47.8046875,
+        "peak_rss_mib": 47.8046875,
+        "fds": 12,
+        "logical_io": {
+          "rchar": 1275005993,
+          "wchar": 853674138,
+          "syscr": 251988,
+          "syscw": 371902,
+          "read_bytes": 32768,
+          "write_bytes": 1206951936,
+          "cancelled_write_bytes": 57344
+        }
+      }
+    },
+    "active": {
+      "requested_seconds": 300.0,
+      "wall_seconds": 300.0010139400256,
+      "processes": {
+        "daemon": {
+          "cpu_seconds": 0.3299999999999983,
+          "self_cpu_seconds": 4.4,
+          "children_cpu_seconds": 43.12,
+          "rss_mib": 48.484375,
+          "peak_rss_mib": 48.484375,
+          "fds": 13,
+          "logical_io": {
+            "rchar": 5065391,
+            "wchar": 1892313,
+            "syscr": 2279,
+            "syscw": 918,
+            "read_bytes": 0,
+            "write_bytes": 2310144,
+            "cancelled_write_bytes": 0
+          },
+          "fd_change": 1
+        },
+        "mock_server_and_harness": {
+          "cpu_seconds": 0.2300000000000001,
+          "self_cpu_seconds": 1.07,
+          "children_cpu_seconds": 0.02,
+          "rss_mib": 30.6015625,
+          "peak_rss_mib": 31.6875,
+          "fds": 11,
+          "logical_io": {
+            "rchar": 1201374,
+            "wchar": 1420,
+            "syscr": 3612,
+            "syscw": 20,
+            "read_bytes": 0,
+            "write_bytes": 45056,
+            "cancelled_write_bytes": 0
+          },
+          "fd_change": 0
+        }
+      },
+      "aggregate": {
+        "cpu_seconds": 0.5599999999999984,
+        "cpu_percent_one_core": 0.1866660357727825,
+        "rss_mib": 79.0859375,
+        "peak_sampled_rss_mib": 79.0859375,
+        "peak_rss_mib": 80.171875,
+        "fds": 24,
+        "logical_io": {
+          "rchar": 6266765,
+          "wchar": 1893733,
+          "syscr": 5891,
+          "syscw": 938,
+          "read_bytes": 0,
+          "write_bytes": 2355200,
+          "cancelled_write_bytes": 0
+        }
+      }
+    },
+    "idle": {
+      "requested_seconds": 300.0,
+      "wall_seconds": 300.00112012500176,
+      "processes": {
+        "daemon": {
+          "cpu_seconds": 0.259999999999998,
+          "self_cpu_seconds": 4.71,
+          "children_cpu_seconds": 43.12,
+          "rss_mib": 48.63671875,
+          "peak_rss_mib": 48.63671875,
+          "fds": 12,
+          "logical_io": {
+            "rchar": 4896661,
+            "wchar": 307777,
+            "syscr": 1760,
+            "syscw": 151,
+            "read_bytes": 0,
+            "write_bytes": 446464,
+            "cancelled_write_bytes": 0
+          },
+          "fd_change": 0
+        },
+        "mock_server_and_harness": {
+          "cpu_seconds": 0.21999999999999997,
+          "self_cpu_seconds": 1.48,
+          "children_cpu_seconds": 0.02,
+          "rss_mib": 30.6015625,
+          "peak_rss_mib": 31.6875,
+          "fds": 11,
+          "logical_io": {
+            "rchar": 1202148,
+            "wchar": 1240,
+            "syscr": 3612,
+            "syscw": 20,
+            "read_bytes": 0,
+            "write_bytes": 81920,
+            "cancelled_write_bytes": 0
+          },
+          "fd_change": 0
+        }
+      },
+      "aggregate": {
+        "cpu_seconds": 0.479999999999998,
+        "cpu_percent_one_core": 0.15999940260222892,
+        "rss_mib": 79.23828125,
+        "peak_sampled_rss_mib": 79.23828125,
+        "peak_rss_mib": 80.32421875,
+        "fds": 23,
+        "logical_io": {
+          "rchar": 6098809,
+          "wchar": 309017,
+          "syscr": 5372,
+          "syscw": 171,
+          "read_bytes": 0,
+          "write_bytes": 528384,
+          "cancelled_write_bytes": 0
+        }
+      }
+    },
+    "cycles": {
+      "waiting_observed": true,
+      "unknown_observed": true,
+      "reconnected": true
+    },
+    "runtime_uncertainty_seconds": 60.00021387898596,
+    "health_at_65_seconds": {
+      "daemon": "running",
+      "heartbeat": "2026-10-14T20:40:07.977504+00:00",
+      "pid": 3634911,
+      "live_diagnostic": null,
+      "data_dir": "/tmp/codex-time-final-service-v5/data",
+      "state_dir": "/tmp/codex-time-final-service-v5/health-probe",
+      "sampling_interval_seconds": 60.0,
+      "notification_mode": "inotify",
+      "sessions": 5449,
+      "diagnostics": [
+        "Codex observation unavailable (ConnectionClosedOK)"
+      ]
+    },
+    "completion_timestamp": "2026-10-14T20:41:13.319337+00:00",
+    "daemon_exit_status": 0,
+    "evidence": {
+      "precise_wait_seconds": 2.125,
+      "lifecycle_preserved": true,
+      "token_journals_unchanged": true,
+      "sampling_quality": [
+        "historical_upper_bound",
+        "observation_gap",
+        "sampled_waits_60s",
+        "unfinished_observed_only"
+      ]
+    },
+    "rpc_counts": {
+      "initialize": 2,
+      "initialized": 2,
+      "thread/loaded/list": 15,
+      "thread/read": 70
+    },
+    "connections": 2,
+    "max_poll_interval_seconds": 120.06637039000634,
+    "unvalidated_or_misses": [],
+    "notes": [
+      "Aggregate includes daemon and mock-server harness process.",
+      "Startup/backfill resources are separate from the active window.",
+      "OS notification ingestion and actual Unix reconnect are exercised.",
+      "The health freshness probe uses a separate disposable runtime directory."
+    ]
+  },
+  "notes": [
+    "Matched core windows exclude socket and Codex metadata processing; actual service reports measure those separately.",
+    "Matched1x fresh disposable index rebuild took26.986s; cached10x restart1.179s. Do not compare these as equivalent restart cache states.",
+    "History inventory uses ordinary ephemeral filename strings; prior os.walk/pathlib interning runs retained in /tmp but not treated as daemon growth.",
+    "Matched100cycles wrote genuinely new evidence:1xRSS+0.199MiB/FD0,10xRSS+0.863MiB/FD0. Short burst CPU is not a steady cadence target.",
+    "Zero-duration soak entries in matched runs are unvalidated and not performance measurements.",
+    "Service steady process cpu_seconds is a window delta; self_cpu_seconds/children_cpu_seconds are raw cumulative /proc readings.",
+    "Service windows include bounded historical metadata reconciliation, so their idle writes are not a claim of fully reconciled zero historical writes.",
+    "Final startup peak89.270MiB is sampled aggregate tracker-worker RSS;96.824MiB is the conservative sum of observed process HWMs, not simultaneous peak. Mock peer/harness excluded from these startup worker numbers."
+  ],
+  "final_v5_package_sha256": "e6d60d29a03cd2f43c62c0ea272c5ecc19cc4f293ea5d87e80ec61f6784d254e",
+  "final_cold_bootstrap_v5": {
+    "scope": "Exact final installed wheel; isolated bootstrap child alone, identical1x legacy fixture; /usr/bin/time -v; no parent/socket/metadata startup included.",
+    "wall_seconds": 101.59,
+    "user_cpu_seconds": 30.94,
+    "system_cpu_seconds": 10.01,
+    "cpu_seconds": 40.95,
+    "peak_rss_mib": 48.68359375,
+    "file_system_inputs": 40,
+    "file_system_outputs": 2337352,
+    "exit_status": 0,
+    "log": "/tmp/codex-final-bootstrap-v5.log"
+  },
+  "feature_parity_v5": {
+    "passed": true,
+    "fixture": {
+      "counts": {
+        "sessions": 6,
+        "turns": 7,
+        "usage": 6,
+        "quota": 4
+      },
+      "content_free": true,
+      "selected_date": "2026-10-14"
+    },
+    "reports": {
+      "history": true,
+      "sessions": true,
+      "model-time": true,
+      "allowance": true,
+      "overview": true,
+      "projects": true,
+      "cwd-history": true,
+      "child-history": true,
+      "midnight-projects": true,
+      "dst-projects": true,
+      "model-csv": true,
+      "allowance-csv": true
+    },
+    "aliases": {
+      "burn": true,
+      "models": true,
+      "day": true,
+      "list": true,
+      "report": true,
+      "status": true
+    },
+    "assertions": {
+      "precise_wait_subtraction": true,
+      "child_excluded": true,
+      "exact_large_counter": true,
+      "rename_preserved": true
+    },
+    "migration": {
+      "backup_verified": true,
+      "batches": 10,
+      "peak_cached_sessions": 2,
+      "cache_limit": 2,
+      "large_counter": 9007199254741001
+    },
+    "restart": {
+      "reports_unchanged": true
+    },
+    "native": {
+      "projection_equal": true,
+      "status": "passed",
+      "list_equal": true,
+      "report_equal": true,
+      "reported_nanoseconds": 154625000000,
+      "date_range": {
+        "from": "2026-10-14",
+        "to": "2026-11-01"
+      }
+    },
+    "normalized_clock_fields": [
+      "check_age_seconds"
+    ],
+    "gaps": [
+      "Interactive session picker/resume is covered by separate runtime smoke checks."
+    ],
+    "baseline": {
+      "checkout": "/home/kevin/coding/track-codex-sessions/.worktrees/token-cost-reporting",
+      "source_sha256": "2ae2366e2887cdab4a178c06c79ff511dd5b161532bc93d7eec301ba913ecb12"
+    },
+    "optimized": {
+      "checkout": "/home/kevin/coding/track-codex-sessions/.worktrees/incremental-tracking",
+      "source_sha256": "e167205b95db3fa9e738ab0490df07e730c45f3a63edc8b17a35b81e1ddc315b"
+    },
+    "work_dir": "/tmp/codex-time-final-parity-v5"
+  },
+  "packaged_report_parity_v5": {
+    "passed": true,
+    "executable": "/tmp/codex-time-final-packaged-v5/bin/codex-time",
+    "lineage": {
+      "module": "/tmp/codex-time-final-packaged-v5/lib/python3.12/site-packages/codex_time/__init__.py"
+    },
+    "reports": {
+      "history": {
+        "equal": true,
+        "packaged_exit": 0,
+        "source_exit": 0
+      },
+      "sessions": {
+        "equal": true,
+        "packaged_exit": 0,
+        "source_exit": 0
+      },
+      "model-time": {
+        "equal": true,
+        "packaged_exit": 0,
+        "source_exit": 0
+      },
+      "allowance": {
+        "equal": true,
+        "packaged_exit": 0,
+        "source_exit": 0
+      },
+      "overview": {
+        "equal": true,
+        "packaged_exit": 0,
+        "source_exit": 0
+      },
+      "projects": {
+        "equal": true,
+        "packaged_exit": 0,
+        "source_exit": 0
+      }
+    },
+    "normalized_clock_fields": [
+      "check_age_seconds"
+    ]
+  },
+  "recovery_verify_v5": {
+    "verified": true,
+    "sessions": 6,
+    "turns": 7,
+    "quota_lines": 4,
+    "quota_unique": 4,
+    "usage_lines": 6,
+    "usage_unique": 6
+  },
+  "recovery_export_v5": {
+    "verified": true,
+    "sessions": 6,
+    "turns": 7,
+    "quota_lines": 4,
+    "quota_unique": 4,
+    "usage_lines": 6,
+    "usage_unique": 6,
+    "destination": "/tmp/codex-time-final-parity-v5/portable-export"
+  },
+  "legacy_report_parity_v5": {
+    "passed": true,
+    "reports": {
+      "history": {
+        "equal": true,
+        "legacy_exit": 0,
+        "packaged_exit": 0
+      },
+      "sessions": {
+        "equal": true,
+        "legacy_exit": 0,
+        "packaged_exit": 0
+      },
+      "model-time": {
+        "equal": true,
+        "legacy_exit": 0,
+        "packaged_exit": 0
+      },
+      "allowance": {
+        "equal": true,
+        "legacy_exit": 0,
+        "packaged_exit": 0
+      },
+      "overview": {
+        "equal": true,
+        "legacy_exit": 0,
+        "packaged_exit": 0
+      },
+      "projects": {
+        "equal": true,
+        "legacy_exit": 0,
+        "packaged_exit": 0
+      }
+    },
+    "native_projection_equal": true,
+    "legacy_source": "/home/kevin/coding/track-codex-sessions/.worktrees/token-cost-reporting/src",
+    "packaged_executable": "/tmp/codex-time-final-packaged-v5/bin/codex-time",
+    "normalized_clock_fields": [
+      "check_age_seconds"
+    ]
+  },
+  "final_startup_workers_v5": {
+    "scope": "Startup-only run; duration0/sample1 deliberately does not validate steady performance. Same wheel/1x fixture/metadata, startup monitor0.1s.",
+    "build": {
+      "package_path": "/tmp/codex-time-final-packaged-v5/lib/python3.12/site-packages/codex_time",
+      "sha256": "e6d60d29a03cd2f43c62c0ea272c5ecc19cc4f293ea5d87e80ec61f6784d254e",
+      "installed_package": true
+    },
+    "startup": {
+      "wall_seconds": 108.11028904200066,
+      "daemon": {
+        "cpu_seconds": 45.62,
+        "self_cpu_seconds": 3.76,
+        "children_cpu_seconds": 41.86,
+        "start_ticks": 42981260,
+        "rss_mib": 46.9921875,
+        "peak_rss_mib": 46.9921875,
+        "fds": 13,
+        "logical_io": {
+          "rchar": 1274924918,
+          "wchar": 852347723,
+          "syscr": 252379,
+          "syscw": 372371,
+          "read_bytes": 20480,
+          "write_bytes": 1200750592,
+          "cancelled_write_bytes": 4096
+        }
+      },
+      "workers": {
+        "sample_interval_seconds": 0.1,
+        "sample_count": 1070,
+        "max_simultaneous_workers": 2,
+        "peak_sampled_aggregate_rss_mib": 89.26953125,
+        "observed_process_hwm_sum_mib": 96.82421875,
+        "hwm_scope": "conservative sum of observed process HWMs; non-simultaneous",
+        "cumulative_cpu_seconds": 45.62,
+        "cpu_scope": "live tree CPU plus reaped descendants once, via parent counters",
+        "rss_scope": "sampled daemon and bootstrap descendants; excludes mock peer/harness",
+        "worker_limit": 32,
+        "inventory_limit": 128,
+        "truncated": false,
+        "observed_processes": 2
+      }
+    },
+    "daemon_exit_status": 0,
+    "evidence": {
+      "precise_wait_seconds": 2.125,
+      "lifecycle_preserved": true,
+      "token_journals_unchanged": true,
+      "sampling_quality": [
+        "historical_upper_bound",
+        "observation_gap",
+        "sampled_waits_1s",
+        "unfinished_observed_only"
+      ]
+    }
+  },
+  "wheel_archive_sha256": "816f564b6081b42ad8231ade7a970de4a0ed3196d416c543e0da3dc112f4b578",
+  "live_activation_v5": {
+    "status": "failed: real rollout backfill OOM; service paused; synthetic readiness withdrawn",
+    "pid": 3755683,
+    "package_sha256": "e6d60d29a03cd2f43c62c0ea272c5ecc19cc4f293ea5d87e80ec61f6784d254e",
+    "backup_verified": true,
+    "backup_path": "/tmp/codex-time-deployment-final-v5-20261014/pre-activation-1792014153977421520",
+    "backup_counts": {
+      "verified": true,
+      "sessions": 5511,
+      "turns": 51520,
+      "quota_lines": 288746,
+      "quota_unique": 288746,
+      "usage_lines": 198564,
+      "usage_unique": 198564
+    },
+    "sample_seconds": 60,
+    "notification_mode": "inotify",
+    "systemd_recorded_peak_gib": 32.7
+  },
+  "real_record_probe_v6": {
+    "address_space_limit_mib": 256,
+    "expected_consumed_bytes": 2135854844,
+    "success": true,
+    "consumed_bytes": 2135854844,
+    "record_kind": "response_item",
+    "payload_kind": "function_call_output",
+    "kept_json_bytes": 147,
+    "wall_seconds": 13.5970213090186,
+    "cpu_seconds": 13.573149806,
+    "proc_peak_rss_mib": 45.3359375,
+    "stream_module_sha256": "8a5dcb5596ccf3c1d3af2b9bdb36858edd6eeb611611682d9f099042f689b4b4"
+  },
+  "live_data_parity_after_v5_oom": {
+    "audit_finished_utc": "2026-10-14T21:51:30.138855+00:00",
+    "audit_started_utc": "2026-10-14T21:50:50.337655+00:00",
+    "backup_verified_manifest": true,
+    "file_integrity": {
+      "ledger.json": {
+        "backup_manifest_sha256": "babd32e479d9ae174a88ac1da51d6018ba7d1ca9db154a1e016491ff6ff492d9",
+        "baseline_bytes": 46931932,
+        "live_bytes_at_hash": 46931932,
+        "live_original_prefix_sha256": "babd32e479d9ae174a88ac1da51d6018ba7d1ca9db154a1e016491ff6ff492d9",
+        "matches": true,
+        "migration_backup_sha256": "babd32e479d9ae174a88ac1da51d6018ba7d1ca9db154a1e016491ff6ff492d9",
+        "verified_backup_sha256": "babd32e479d9ae174a88ac1da51d6018ba7d1ca9db154a1e016491ff6ff492d9"
+      },
+      "quota-observations.jsonl": {
+        "backup_manifest_sha256": "51e54d3928e8a5f9eafff586cd36c02372a2220402777f24ee676430a37e5d3f",
+        "baseline_bytes": 59586166,
+        "live_bytes_at_hash": 59595230,
+        "live_original_prefix_sha256": "51e54d3928e8a5f9eafff586cd36c02372a2220402777f24ee676430a37e5d3f",
+        "matches": true,
+        "migration_backup_sha256": "51e54d3928e8a5f9eafff586cd36c02372a2220402777f24ee676430a37e5d3f",
+        "verified_backup_sha256": "51e54d3928e8a5f9eafff586cd36c02372a2220402777f24ee676430a37e5d3f"
+      },
+      "usage-observations.jsonl": {
+        "backup_manifest_sha256": "735608689fc1d859292767a8fd68ff776d2bd4bfe1293f8f4eb1d634f1ade06e",
+        "baseline_bytes": 159415277,
+        "live_bytes_at_hash": 159451326,
+        "live_original_prefix_sha256": "735608689fc1d859292767a8fd68ff776d2bd4bfe1293f8f4eb1d634f1ade06e",
+        "matches": true,
+        "migration_backup_sha256": "735608689fc1d859292767a8fd68ff776d2bd4bfe1293f8f4eb1d634f1ade06e",
+        "verified_backup_sha256": "735608689fc1d859292767a8fd68ff776d2bd4bfe1293f8f4eb1d634f1ade06e"
+      }
+    },
+    "limitations": [
+      "Live writer continued running: per-session atomic snapshot reads and bounded journal byte snapshots, not a globally atomic current-data count.",
+      "New turns, completed open turns, new timing evidence and marked metadata refinements are distinguished from missing historical evidence."
+    ],
+    "live_journal_byte_snapshots": [
+      {
+        "complete_lines": 288799,
+        "file": "quota-observations.jsonl",
+        "partial_tail_deferred": 0,
+        "snapshot_bytes": 59597084
+      },
+      {
+        "complete_lines": 0,
+        "file": "legacy-quota-observations.jsonl",
+        "partial_tail_deferred": 0,
+        "snapshot_bytes": 0
+      },
+      {
+        "complete_lines": 198617,
+        "file": "usage-observations.jsonl",
+        "partial_tail_deferred": 0,
+        "snapshot_bytes": 159458392
+      },
+      {
+        "complete_lines": 0,
+        "file": "legacy-usage-observations.jsonl",
+        "partial_tail_deferred": 0,
+        "snapshot_bytes": 0
+      }
+    ],
+    "mismatches_by_category": {},
+    "observations": {
+      "quota": {
+        "baseline_unique": 288746,
+        "changed_payloads": 0,
+        "live_unique": 288799,
+        "missing": 0,
+        "new_live_unique": 53,
+        "retained": 288746
+      },
+      "usage": {
+        "baseline_unique": 198564,
+        "changed_payloads": 0,
+        "live_unique": 198617,
+        "missing": 0,
+        "new_live_unique": 53,
+        "retained": 198564
+      }
+    },
+    "passed": true,
+    "read_only_live_access": true,
+    "scope": "Pre-activation lifecycle, known waits/coverage, model evidence and exact quota/usage retention; no conversation sources read.",
+    "sessions": {
+      "added_coverage_spans": 1,
+      "added_wait_spans": 0,
+      "additional_live_session_snapshots": 2,
+      "baseline_closed_lifecycle_microseconds": 1980069745000,
+      "baseline_closed_turns": 51480,
+      "baseline_coverage_microseconds": 73404106786,
+      "baseline_coverage_spans": 12411,
+      "baseline_model_contexts": 60147,
+      "baseline_sessions": 5511,
+      "baseline_turns": 51520,
+      "baseline_wait_microseconds": 146687110604,
+      "baseline_wait_spans": 1819,
+      "current_corresponding_closed_lifecycle_microseconds": 1980069745000,
+      "exact_closed_end_timestamps_retained": 51480,
+      "exact_coverage_spans_retained": 12411,
+      "exact_start_timestamps_retained": 51520,
+      "exact_wait_spans_retained": 1819,
+      "new_turns_in_existing_sessions": 13,
+      "previously_open_turns_completed": 1,
+      "retained_historical_turns": 51520,
+      "session_metadata_updates_archived": 0,
+      "session_metadata_updates_created": 0,
+      "session_metadata_updates_cwd": 1,
+      "session_metadata_updates_is_child": 0,
+      "session_metadata_updates_parent_id": 0,
+      "session_metadata_updates_title": 3,
+      "session_metadata_updates_updated": 4
+    },
+    "token_absence_counts_before": {
+      "cache_write_input_tokens": 154571,
+      "cached_input_tokens": 27113,
+      "input_tokens": 27113,
+      "output_tokens": 27113,
+      "reasoning_output_tokens": 27113,
+      "total_tokens": 27113
+    },
+    "token_absence_counts_retained": {
+      "cache_write_input_tokens": 154571,
+      "cached_input_tokens": 27113,
+      "input_tokens": 27113,
+      "output_tokens": 27113,
+      "reasoning_output_tokens": 27113,
+      "total_tokens": 27113
+    },
+    "token_delta_sums_before": {
+      "cache_write_input_tokens": 0,
+      "cached_input_tokens": 11167570560,
+      "input_tokens": 11794997944,
+      "output_tokens": 60019748,
+      "reasoning_output_tokens": 26822910,
+      "request_input_tokens": 11794997875,
+      "total_tokens": 11855017692
+    },
+    "token_delta_sums_retained": {
+      "cache_write_input_tokens": 0,
+      "cached_input_tokens": 11167570560,
+      "input_tokens": 11794997944,
+      "output_tokens": 60019748,
+      "reasoning_output_tokens": 26822910,
+      "request_input_tokens": 11794997875,
+      "total_tokens": 11855017692
+    },
+    "verified_backup_counts": {
+      "quota_lines": 288746,
+      "quota_unique": 288746,
+      "sessions": 5511,
+      "turns": 51520,
+      "usage_lines": 198564,
+      "usage_unique": 198564,
+      "verified": true
+    }
+  },
+  "v6_release": {
+    "source_sha256": "5d344eda64c792bc0ac7e18c692e3b08ae0676281ab9af097e35384973594de1",
+    "bundle": "/home/kevin/.local/state/codex-time/deployments/incremental-v6-20261014",
+    "status": "prepared and verified; explicit activation approval pending after automatic review rejection",
+    "tests": 449
+  }
+}

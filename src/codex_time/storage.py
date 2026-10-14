@@ -9,6 +9,7 @@ from collections.abc import Iterator
 from contextlib import contextmanager
 from datetime import UTC, datetime, time, timedelta
 from pathlib import Path
+from time import monotonic
 from typing import Protocol
 from zoneinfo import ZoneInfo
 
@@ -25,8 +26,16 @@ class Digest(Protocol):
 
 
 def quota_key(q: QuotaObservation) -> tuple[object, ...]:
-    return (q.at, q.limit_id, q.plan_type, q.bucket, q.window_minutes, q.resets_at,
-            q.used_percent, q.provenance)
+    return (
+        q.at,
+        q.limit_id,
+        q.plan_type,
+        q.bucket,
+        q.window_minutes,
+        q.resets_at,
+        q.used_percent,
+        q.provenance,
+    )
 
 
 class StoreError(RuntimeError):
@@ -86,6 +95,8 @@ class Store:
         self._embedded_usage: list[UsageObservation] = []
         self._usage_source: list[UsageObservation] | None = None
         self._usage_offset = 0
+        self._picker_snapshot: Ledger | None = None
+        self._picker_next_read = 0.0
 
     @staticmethod
     def _stat_key(path: Path) -> tuple[int, ...]:
@@ -112,13 +123,33 @@ class Store:
         staging = self.runtime / ".staging" if path.is_relative_to(self.runtime) else self.staging
         atomic_json(path, value, staging)
 
+    def _write_projection(self, path: Path, value: object) -> None:
+        try:
+            if json.loads(path.read_bytes()) == value:
+                return
+        except (OSError, ValueError):
+            pass
+        self._write(path, value)
+
     def fingerprint(self) -> str | None:
+        if (self.root / "layout.json").exists():
+            identities = []
+            for name in (
+                "layout.json",
+                "quota-observations.jsonl",
+                "usage-observations.jsonl",
+                "legacy-quota-observations.jsonl",
+                "legacy-usage-observations.jsonl",
+            ):
+                digest = self._digest(self.root / name)
+                identities.append(digest.hexdigest() if digest is not None else "-")
+            return hashlib.sha256(":".join(identities).encode()).hexdigest()
         ledger = self._digest(self.root / "ledger.json")
         journal = self._digest(self.root / "quota-observations.jsonl")
         usage = self._digest(self.root / "usage-observations.jsonl")
         if journal is None and usage is None:
             return ledger.hexdigest() if ledger is not None else None
-        identity = (ledger.hexdigest() if ledger is not None else "-")
+        identity = ledger.hexdigest() if ledger is not None else "-"
         identity += ":" + (journal.hexdigest() if journal is not None else "-")
         if usage is not None:
             identity += ":" + usage.hexdigest()
@@ -143,10 +174,15 @@ class Store:
                 self._locked = False
                 fcntl.flock(lock, fcntl.LOCK_UN)
 
-    def load(self) -> Ledger:
+    def load(self, *, include_evidence: bool = True) -> Ledger:
         path = self.root / "ledger.json"
         try:
-            ledger = Ledger.model_validate_json(path.read_text()) if path.exists() else Ledger()
+            if (self.root / "layout.json").exists():
+                from codex_time.incremental_storage import load_timing
+
+                ledger = load_timing(self.root, include_evidence=include_evidence)
+            else:
+                ledger = Ledger.model_validate_json(path.read_text()) if path.exists() else Ledger()
             if any(
                 sid != s.id or any(tid != t.id for tid, t in s.turns.items())
                 for sid, s in ledger.sessions.items()
@@ -154,6 +190,10 @@ class Store:
                 raise ValueError("identifier/key mismatch")
         except (OSError, ValueError, ValidationError) as exc:
             raise StoreError("invalid ledger.json; restore a valid backup before writing") from exc
+        if not include_evidence:
+            ledger.quota_observations = []
+            ledger.usage_observations = []
+            return ledger
         embedded = {quota_key(q): q for q in ledger.quota_observations}
         ledger.quota_observations = list(embedded.values())
         self._embedded_quotas = ledger.quota_observations.copy()
@@ -184,6 +224,25 @@ class Store:
         self._load_usage(ledger)
         self._disk_hash = self.fingerprint()
         return ledger
+
+    def summary(self) -> dict[str, object]:
+        if (self.root / "layout.json").exists():
+            from codex_time.incremental_storage import layout
+
+            meta = layout(self.root) or {}
+            return {
+                "sessions": sum(1 for _ in (self.root / "sessions").glob("*.json")),
+                "diagnostics": meta.get("diagnostics", []),
+            }
+        ledger = self.load(include_evidence=False)
+        return {"sessions": len(ledger.sessions), "diagnostics": ledger.diagnostics}
+
+    def picker_snapshot(self) -> Ledger:
+        now = monotonic()
+        if self._picker_snapshot is None or now >= self._picker_next_read:
+            self._picker_snapshot = self.load(include_evidence=False)
+            self._picker_next_read = now + 60
+        return self._picker_snapshot
 
     def _load_usage(self, ledger: Ledger) -> None:
         known: dict[str, UsageObservation] = {}
@@ -296,7 +355,20 @@ class Store:
         )
         rendered = json.dumps(payload, sort_keys=True)
         if rendered != self._ledger_json:
-            self._write(self.root / "ledger.json", payload)
+            if (self.root / "layout.json").exists():
+                import uuid
+
+                from codex_time.incremental_storage import layout, read_session, session_path
+
+                for sid, session in ledger.sessions.items():
+                    destination = session_path(self.root, sid)
+                    if not destination.exists() or read_session(destination, sid) != session:
+                        self._write(destination, session.model_dump(mode="json"))
+                meta = layout(self.root) or {}
+                meta.update(revision=uuid.uuid4().hex, diagnostics=ledger.diagnostics)
+                self._write(self.root / "layout.json", meta)
+            else:
+                self._write(self.root / "ledger.json", payload)
             self._ledger_json = rendered
         # Ingestion appends to this list. Replacements/reloads get a full exact dedup pass.
         offset = self._quota_offset if self._quota_source is ledger.quota_observations else 0
@@ -314,7 +386,7 @@ class Store:
         self._disk_hash = self.fingerprint()
         self.project(ledger)
 
-    def project(self, ledger: Ledger) -> None:
+    def project(self, ledger: Ledger, *, sweep: bool = True) -> None:
         """Recover native projection deterministically; remove only owned record names."""
         if not self._locked:
             raise StoreError("writer lock required")
@@ -331,10 +403,14 @@ class Store:
                 for span in segments(list(session.turns.values())):
                     project = key(span.cwd)
                     if project not in self._projects:
-                        self._write(
-                            self.root / "projects" / f"{project}.json",
-                            {"key": project, "name": span.cwd},
-                        )
+                        project_path = self.root / "projects" / f"{project}.json"
+                        project_value = {"key": project, "name": span.cwd}
+                        try:
+                            matches = json.loads(project_path.read_bytes()) == project_value
+                        except (OSError, ValueError):
+                            matches = False
+                        if not matches:
+                            self._write(project_path, project_value)
                         self._projects.add(project)
                     cursor = span.start
                     while cursor < span.end:
@@ -357,7 +433,7 @@ class Store:
                             / (f"codex-time-{key(identity)}.json")
                         )
                         owned.add(path)
-                        self._write(
+                        self._write_projection(
                             path,
                             {
                                 "start": local.isoformat(),
@@ -371,9 +447,12 @@ class Store:
                             },
                         )
                         cursor = end
+            if cached:
+                for path in cached[1] - owned:
+                    path.unlink(missing_ok=True)
             expected.update(owned)
             self._projection[session.id] = (signature, owned)
-        for path in (self.root / "records").glob("*/codex-time-*.json"):
+        for path in (self.root / "records").glob("*/codex-time-*.json") if sweep else ():
             if path not in expected:
                 path.unlink()
         for sid in set(self._projection) - set(ledger.sessions):

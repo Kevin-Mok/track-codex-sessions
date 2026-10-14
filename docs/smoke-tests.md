@@ -34,11 +34,11 @@ Verify automatic work accounting, daily repo/session reports, model working-time
 
 **Action:** Start a normal root task containing a quiet tool lasting roughly 20 seconds. Watch `codex-time sessions --all-dirs` from another terminal.
 
-**Expected:** Thinking and the quiet tool both accrue work; silence does not pause time. Completion stops work and the next idle gap adds nothing.
+**Expected:** Thinking and the quiet tool both accrue work; silence does not pause time. Ingestion and live display may lag by up to 60 seconds. Precise lifecycle completion stops recorded work and the next idle gap adds nothing.
 
 **Action:** Let a normal task reach a blocking question or approval wait, leave it waiting for roughly 20 seconds, then answer/approve. Inspect details and report.
 
-**Expected:** Explicit live wait state pauses work and persists observed waits. A 60-second lifecycle with a 20-second detected wait reports roughly 40 seconds, within sampled uncertainty. Async questions alone do not pause active work. Historical approval waits remain labelled upper bounds. The automated controllable-clock case proves exactly 60 minus 20 equals 40 without depending on a real model’s timing.
+**Expected:** A sampled live wait pauses work and persists observed waits. A short wait visible only through the socket may fall entirely between minute samples; inspect the actual uncertainty rather than assuming one-second accuracy. A 60-second lifecycle with a 20-second known source wait retains exactly 40 seconds of counted work. Async questions alone do not pause active work, and unresolved historical approval waits remain labelled upper bounds. The automated controllable-clock case proves exactly 60 minus 20 equals 40 without depending on a real model’s timing.
 
 **Action:** Run two independent five-minute root tasks concurrently, then inspect all-directory reports. Include a task using child agents.
 
@@ -56,7 +56,7 @@ Verify automatic work accounting, daily repo/session reports, model working-time
 
 **Action:** systemctl --user stop codex-time.service && codex-time import-history && codex-time import-history && systemctl --user start codex-time.service
 
-**Expected:** Comparing a reviewed data-store diff shows no duplicate records or model contexts. Version 1, 2 and 3 ledger timing and wait evidence survive upgrade to version 4; available rollout history backfills model attribution once, and unavailable sources preserve work and saved attribution, with Unknown where evidence is missing. Historical reconciliation may add newly discovered waits or replace marked SQLite estimates with precise rollout times; prior evidence remains covered. Durable data contains only ledger/quota and usage journals/projects/records; checkpoint/lock/staging files stay outside that repository; both content-free journals belong with the ledger in durable snapshots. Existing ~/.timetrace is unaffected. Never run native editing/start/stop commands against tracker data.
+**Expected:** Comparing a reviewed data-store diff shows no duplicate records or model contexts. Version 1, 2 and 3 ledger timing and wait evidence survive upgrade to version 4; available rollout history backfills model attribution once, and unavailable sources preserve work and saved attribution, with Unknown where evidence is missing. Historical reconciliation may add newly discovered waits or replace marked SQLite estimates with precise rollout times; prior evidence remains covered. Preserve the complete durable data root, including the layout marker, per-session snapshots, original ledger, current/legacy evidence journals, verified migration backup, projects and records. Disposable index/checkpoint/lock/staging files remain outside that repository. Existing ~/.timetrace is unaffected. Never run native editing/start/stop commands against tracker data.
 
 **Action:** ./scripts/uninstall.sh
 
@@ -90,7 +90,7 @@ Verify automatic work accounting, daily repo/session reports, model working-time
 
 **Action:** uv tool install --python 3.12 --force --reinstall-package codex-time "$PWD" && (cd /tmp && codex-time overview --plain && codex-time --help)
 
-**Expected:** Run from the checkout to refresh the installed package without restarting the observer. From outside the checkout, the installed executable exposes the overview and canonical command help, including a same-version source update. No data migration or sudo is required.
+**Expected:** Run from the checkout to refresh the installed package without restarting the observer. From outside the checkout, the installed executable exposes the overview and canonical command help, including a same-version source update. Package refresh alone does not migrate history; the next upgraded daemon start may perform the versioned migration after verifying its backup. No sudo is required.
 
 ## Daily repo and session time
 
@@ -184,7 +184,7 @@ Verify automatic work accounting, daily repo/session reports, model working-time
 
 ## Recorded evidence
 
-Implementation verification and exact fresh counts are maintained in [the base ExecPlan](../plans/codex-session-time-tracker.md) and [the model-usage ExecPlan](../plans/codex-model-usage-reports.md), and [the allowance-tracking ExecPlan](../plans/codex-model-burn-tracking.md). Terminal presentation checks are recorded in [the readability plan](../plans/codex-burn-terminal-ux.md). Combined overview and command compatibility verification is recorded in [the overview plan](../plans/overview-command-layout.md). The checks above describe expected outcomes; their execution evidence belongs in those plans. Human-controlled approval timing, model switches and five-minute real-model checks are manual checks and must not be claimed as executed without evidence.
+Implementation verification and exact fresh counts are maintained in [the base ExecPlan](../plans/codex-session-time-tracker.md) and [the model-usage ExecPlan](../plans/codex-model-usage-reports.md), and [the allowance-tracking ExecPlan](../plans/codex-model-burn-tracking.md). Terminal presentation checks are recorded in [the readability plan](../plans/codex-burn-terminal-ux.md). Combined overview and command compatibility verification is recorded in [the overview plan](../plans/overview-command-layout.md); minute-cadence, final packaged parity and portable recovery evidence is recorded in [the incremental-tracking plan](../plans/incremental-tracking.md). The checks above describe expected outcomes; their execution evidence belongs in those plans. Human-controlled approval timing, model switches and five-minute real-model checks are manual checks and must not be claimed as executed without evidence.
 
 ## Public source checkout
 
@@ -229,3 +229,31 @@ Run these from the repository root without sudo after package refresh. `token-sm
 **Expected:** Exit status 2 and `--date cannot be combined with all`; reports never start a network request or modify stored data.
 
 Migration, billing limits, conservative restored-prefix behavior and rollback are documented in [the token-cost guide](token-cost-reporting.md); exact execution evidence is maintained in [the token-cost plan](../plans/codex-token-cost-reporting.md).
+
+## Incremental storage and minute-cadence upgrade
+
+**Action:** Run `uv run python scripts/verify-parity.py --plain --json` in the incremental-tracking checkout.
+
+**Expected:** JSON reports `passed: true`; twelve actual CLI JSON/CSV/report comparisons and six aliases pass, including exact large token counters, waits, child exclusion, per-turn cwd, model/reasoning, FX and DST. Migration backup verifies and restart reports remain unchanged. With an installed, isolated native reader, list/report totals match exactly: the default six-session/seven-turn fixture reports 154,625,000,000 native nanoseconds. Missing native readers or conflicting system configuration are explicitly skipped, and interactive picker/resume coverage remains a separate runtime smoke check. Source fixtures remain unchanged; auth/config files are excluded. Only volatile FX `check_age_seconds` is normalized. Add `--work-dir /absolute/fresh-directory` to retain JSON evidence and portable fixture data.
+
+**Recorded validation:** Final source parity passed all twelve comparisons and six aliases. The final wheel's six canonical JSON reports also matched the source reports. Its migrated fixture verified six sessions, seven turns, four unique quota readings and six unique usage observations; exporting it to the portable legacy layout preserved all six old-executable reports and native projections. Migration backup and restart checks passed. Performance-window evidence is recorded separately in the incremental-tracking plan.
+
+**Action:** Build a wheel, install it into a fresh disposable virtual environment, and run `uv run python scripts/service-smoke.py --executable /absolute/venv/bin/codex-time --metadata-fixture --duration 300 --idle-seconds 300 --plain --json`. Add `--fixture /absolute/benchmark/fixture` to exercise measured history scale. --metadata-fixture generates matching read-only thread/turn/name history and excludes initial name bootstrap from steady windows.
+
+**Expected:** The helper confirms installed wheel provenance, then observes five roots through working, waiting, unknown and real reconnect states. Precise lifecycle completion and 2.125-second known wait survive. A 65-second heartbeat remains running; uncertainty is at least 60 seconds, with outage provenance for missed polls. Five-minute active/idle CPU and RSS appear separately from startup and peer/harness resources. No descriptor growth, disallowed RPC or token-journal mutation occurs.
+
+**Action:** Run `uv run python scripts/benchmark.py --baseline /absolute/deployed-checkout --work-dir /tmp/fresh-codex-benchmark --plain --json`, then repeat in another fresh directory with `--skip-baseline --scale 10 --soak-seconds 0`.
+
+**Expected:** Progress continues on stderr and JSON stdout stays clean. Exact fixture/source hashes and history counts, ingestion/observation/persistence/projection timings, 300-second idle/active windows, 1,800-second fixed-input soak and repeated cycles are reported. Idle historical-file identities remain unchanged. Targets or misses are explicit; short runs cannot claim five-minute or soak validation. Tenfold history uses the same five active roots.
+
+**Action:** With a fixture writer stopped, run `uv run python scripts/storage-recovery.py --data-dir /absolute/fixture-data --state-dir /absolute/fixture-state --plain --json verify`, then `export-legacy /absolute/fresh-legacy-export` with the same options.
+
+**Expected:** Portable sessions/turns and exact unique quota/usage identities validate using disk indexes. Export publishes a new v4 ledger and combined journals only after count/hash checks, preserves current post-migration evidence and native records, and leaves its source intact. Old-executable reports match the new data. An existing destination or corrupt durable evidence is refused. Runtime index corruption is quarantined/rebuilt; isolated older session restores replay metadata rather than trusting stale signatures.
+
+**Action:** Run `python3 /absolute/bundle/deployment.py --plain --json verify --bundle /absolute/bundle` against the prepared deployment manifest before requesting live activation.
+
+**Expected:** Final/prior wheels, installed lineage, service definition and hashes are concrete. Activation and rollback use verified stopped-writer backups and current-data legacy conversion. Preparation does not change service state; activation requires the separate decision. After a failed rollout, verify whether the service is paused before declaring it healthy. No raw Codex source/config/auth files enter the bundle. Isolated rollback checks retain new timing, unrelated original files and valid cached FX; an offline actual report uses the same rate. Changed installation/unit hashes and corrupt/mixed backup artifacts refuse install.
+
+**Action:** Against the installed corrected wheel, run the packaged service check above at minute cadence, then inspect actual service health and initial backfill before recording a five-minute production resource window. Include a disposable rollout whose ignored body exceeds the memory limit, with lifecycle fields after that body; append its newline only after the initial scan.
+
+**Expected:** Ignored bodies stream without whole-record allocation; no raw body is stored. Exact lifecycle fields appear only after newline completion, once. The source checkpoint reaches the complete record boundary, backfill finishes without restart/OOM, and CPU/RSS measurements identify build and workload. A synthetic five-root pass alone does not establish production readiness. Explicit unsupported-metadata diagnostics and actual sampling uncertainty remain visible.

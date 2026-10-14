@@ -1,6 +1,7 @@
 import json
 import os
 import subprocess
+import sys
 from pathlib import Path
 
 
@@ -72,3 +73,21 @@ def test_status_empty_and_bad_timezone(tmp_path: Path) -> None:
     )
     assert invalid.returncode == 2
     assert "timezone" in invalid.stderr
+
+
+def test_health_has_decorated_and_plain_output(tmp_path: Path) -> None:
+    env = dict(os.environ, PYTHONPATH=str(Path(__file__).parents[1] / "src"))
+    base = [
+        sys.executable,
+        "-c",
+        "from codex_time.cli import main; raise SystemExit(main())",
+        "--data-dir",
+        str(tmp_path / "data"),
+        "--state-dir",
+        str(tmp_path / "state"),
+    ]
+    decorated = subprocess.run([*base, "health"], env=env, capture_output=True, text=True)
+    assert decorated.returncode == 0 and "🩺" in decorated.stdout
+    plain = subprocess.run([*base, "health", "--plain"], env=env, capture_output=True, text=True)
+    assert plain.returncode == 0 and plain.stdout.isascii()
+    assert "Codex Time health" in plain.stdout

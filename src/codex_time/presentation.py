@@ -74,7 +74,7 @@ def display_segments(
     latest = max(candidates, key=lambda turn: (turn.start, turn.id), default=None)
     for turn in session.turns.values():
         fresh = observation is not None and timedelta(0) <= now - observation.at <= timedelta(
-            seconds=3
+            seconds=max(3, observation.uncertainty_seconds * 1.25)
         )
         selected = observation is not None and (
             observation.turn_id == turn.id
@@ -124,7 +124,9 @@ def build_rows(
             continue
         observation = observations.get(session.id)
         state = "unknown"
-        if observation is not None and timedelta(0) <= now - observation.at <= timedelta(seconds=3):
+        if observation is not None and timedelta(0) <= now - observation.at <= timedelta(
+            seconds=max(3, observation.uncertainty_seconds * 1.25)
+        ):
             state = observation.state
         work = display_segments(session, observation, now)
         intervals = attributed_segments(session, work)
@@ -235,7 +237,7 @@ def _details(row: SessionRow, timezone_name: str) -> list[str]:
 def _browse(
     screen: curses.window, load: SnapshotLoader, timezone_name: str, cwd: str, codex_home: Path
 ) -> None:
-    screen.timeout(1000)
+    screen.timeout(60000)
     try:
         curses.curs_set(0)
     except curses.error:
@@ -386,7 +388,7 @@ def _browse(
             finally:
                 curses.reset_prog_mode()
                 screen.refresh()
-                screen.timeout(1000)
+                screen.timeout(60000)
 
 
 def run_ui(load: SnapshotLoader, timezone_name: str, cwd: str, codex_home: Path) -> None:

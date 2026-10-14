@@ -26,7 +26,7 @@ async def test_slow_fx_runs_beside_tracking_and_is_cancelled_on_stop(tmp_path, m
     class Client:
         diagnostic = None
 
-        def __init__(self, *args):
+        def __init__(self, *args, **kwargs):
             self.polls = 0
 
         async def poll(self):
@@ -41,7 +41,9 @@ async def test_slow_fx_runs_beside_tracking_and_is_cancelled_on_stop(tmp_path, m
     monkeypatch.setattr(daemon, "refresh_fx", refresh, raising=False)
     monkeypatch.setattr(daemon, "LiveClient", Client)
     store = Store(tmp_path / "data", tmp_path / "state")
-    await asyncio.wait_for(daemon.run_daemon(store, tmp_path / "codex", None, stop), 3)
+    await asyncio.wait_for(
+        daemon.run_daemon(store, tmp_path / "codex", None, stop, sample_seconds=1), 3
+    )
     assert started.is_set() and cancelled.is_set()
     assert calls == [store.runtime]
     assert store.load().version == 4
@@ -59,7 +61,7 @@ async def test_fx_cache_write_failure_does_not_break_or_retry_each_iteration(tmp
     class Client:
         diagnostic = None
 
-        def __init__(self, *args):
+        def __init__(self, *args, **kwargs):
             self.polls = 0
 
         async def poll(self):
@@ -74,7 +76,9 @@ async def test_fx_cache_write_failure_does_not_break_or_retry_each_iteration(tmp
     monkeypatch.setattr(daemon, "refresh_fx", refresh, raising=False)
     monkeypatch.setattr(daemon, "LiveClient", Client)
     store = Store(tmp_path / "data", tmp_path / "state")
-    await asyncio.wait_for(daemon.run_daemon(store, tmp_path / "codex", None, stop), 4)
+    await asyncio.wait_for(
+        daemon.run_daemon(store, tmp_path / "codex", None, stop, sample_seconds=1), 4
+    )
     assert len(calls) == 1
     assert any("FX cache" in d for d in store.load().diagnostics)
 
@@ -88,7 +92,7 @@ async def test_successful_cached_check_does_not_schedule_network(tmp_path, monke
     class Client:
         diagnostic = None
 
-        def __init__(self, *args):
+        def __init__(self, *args, **kwargs):
             pass
 
         async def poll(self):
@@ -105,7 +109,7 @@ async def test_successful_cached_check_does_not_schedule_network(tmp_path, monke
     (store.runtime / "fx-usd-cad.json").write_text(
         FXSnapshot(last_success=datetime.now(UTC)).model_dump_json()
     )
-    await daemon.run_daemon(store, tmp_path / "codex", None, stop)
+    await daemon.run_daemon(store, tmp_path / "codex", None, stop, sample_seconds=1)
 
 
 def test_import_history_reports_progress_on_stderr(tmp_path: Path, capsys):
