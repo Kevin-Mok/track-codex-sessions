@@ -19,3 +19,9 @@ Keep local tracker changes grounded in lifecycle and read-only runtime evidence.
 - Share percentage labels must use the same formatter in table and stacked layouts; a positive tiny share must not become zero only because terminal width or model-name length changes.
 
 - Wrap cohort labels with Rich Text instead of Rule titles: narrow Rule titles may truncate reset evidence and insert a Unicode ellipsis even in ASCII output.
+
+- Historical journals reduce durable ledger size but do not bound daemon memory or eliminate full session serialization each poll. Measure unchanged saves at real history scale, and compare installed-file dates with process startup before attributing on-disk code to a running daemon.
+
+- A rollout first observed empty must acquire a nonempty prefix identity after growth; hashing zero bytes forever silently disables in-place replacement detection. Persist complete-line byte offsets and preserve all tty candidates until reconciliation so one evidence source cannot hide another source’s ambiguity.
+
+- Use unprofiled real-record microbenchmarks before optimizing Pydantic validation: cProfile amplifies Python-call overhead and can make batching look promising when it is slower. Calendar-report session pruning must use turn work/coverage, keep all waits/contexts in retained sessions, and be verified with a schema-compatible installed-build overlay.

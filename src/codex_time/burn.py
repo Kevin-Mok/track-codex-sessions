@@ -9,6 +9,7 @@ from zoneinfo import ZoneInfo
 
 from codex_time.model_usage import attributed_segments, calendar_dates
 from codex_time.models import AttributedSegment, Ledger, QuotaObservation
+from codex_time.work_period import has_work_in_period
 
 
 class MixRow(TypedDict):
@@ -167,6 +168,7 @@ def burn_report(
         [
             (session.id, span)
             for session in ledger.sessions.values()
+            if has_work_in_period(session, start, end)
             for span in attributed_segments(session)
             if span.start < end and span.end > start
         ],

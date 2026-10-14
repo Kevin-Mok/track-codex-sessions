@@ -191,3 +191,43 @@ Implementation verification and exact fresh counts are maintained in [the base E
 **Action:** Follow the README clone instructions in a fresh directory, then run `uv sync --python 3.12`, `uv run codex-time --help`, and `./scripts/smoke-test.sh`. Run setup only when you intend to install and enable the user service.
 
 **Expected:** The public checkout has source, tests, scripts and matching implementation plans; help and isolated smoke checks work without personal ledgers or allowance-history artifacts. Setup is a separate deliberate installation step. Virtual environments, build output and local usage records are absent from Git history.
+
+## Background daemon resources
+
+Check both freshness and resource use; a running service or fresh heartbeat does not establish an efficient observer. See [the October 14 assessment](postmortem/2026-10-14-codex-time-resource-use.md) for measured history-processing overhead and limits.
+
+**Action:** From any directory, run `systemctl --user status codex-time.service --no-pager`, then `top -b -d 1 -n 2 -p (systemctl --user show codex-time.service --property=MainPID --value)` in fish, and `codex-time health --json`. No sudo is needed.
+
+**Expected:** The status and health PID agree for a running tracker; health has a fresh heartbeat. The second top sample shows current CPU and RSS. Sustained near-100% CPU indicates expensive work even when health is running. Repeat comparable observations with no new activity to investigate growth; one high RSS reading is insufficient to establish a leak. A restart preserves recorded history but requires a fresh post-start resource measurement before claiming recovery.
+
+## Cached session state for outside watchers
+
+Run from the source checkout until this version is installed; no sudo is needed. These commands read Codex files and write only disposable private state. See [the watcher contract](session-status.md).
+
+**Action:** uv run codex-time status --json
+
+**Expected:** A version-1 JSON object contains observer-health keys and a sessions array with tty/cwd/rollout path, lifecycle state, last user/assistant text and source update time. Stdout contains only JSON; a long first replay reports elapsed progress on stderr. A second call with unchanged sources has scan.opened=0 and scan.bytes_read=0. Concurrent live appends can produce fresh=false/exit 2; retry, rather than treating stale state as completion.
+
+**Action:** uv run codex-time status --plain
+
+**Expected:** ASCII human output shows freshness, session count, cache path and up to 20 recent lifecycle states. No conversation body is printed. Tty is null/dash where exact process evidence is unavailable. The daemon may be stopped; raw terminal events still determine mid_turn/idle.
+
+**Action:** uv run python scripts/verify-session-status.py
+
+**Expected:** Private temporary rollout clones/copies produce cold/warm/unchanged timing metrics; warm/unchanged scans open zero raw files and read zero bytes. Every cached session field equals an independent full replay. Source rollouts, durable tracker data and the installed service remain unchanged. Progress is ongoing during large scans, and temporary message-bearing copies are removed at exit.
+
+## Overview performance and exact accounting parity
+
+Use the source repository root; no sudo is needed. The verifier copies ledger, quota, token and FX inputs into temporary storage, preserves the installed schema/token build, and removes copies on exit. Its output contains sizes/hashes/timings only.
+
+**Action:** python3 scripts/verify-overview-performance.py
+
+**Expected:** Four first/warm CLI runs per build report seconds, with ongoing elapsed progress. Every optimized JSON field matches full historical computation. The success message explicitly says temporary overlay only; live installation, daemon, rollouts and durable data remain unchanged. Timing is measured, not a guaranteed threshold.
+
+**Action:** python3 scripts/verify-overview-performance.py --period week --date 2026-10-14 --runs 1
+
+**Expected:** Exact parity for the selected weekly bounds, including allowance reset/conflict evidence, reasoning, uncertainty and token fields supported by the installed build. Source drift produces a refusal rather than a guessed patch.
+
+**Action:** python3 scripts/verify-overview-performance.py --period month --date 2026-11-01 --timezone America/Toronto --runs 1 --plain
+
+**Expected:** Full-report parity across the month containing the DST fallback, including an empty/future period when no work exists. Human progress/success output is ASCII. No cache can conceal changed inputs; each invocation takes new frozen copies.

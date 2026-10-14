@@ -19,8 +19,8 @@ Include this delivery plan and matching status updates with both milestones. No 
 - [x] Consult sandbox incident knowledge and record approved-route workaround.
 - [x] Complete fresh pytest, Ruff, strict mypy, build and artifact checks.
 - [x] Complete README gate and read-only cache review.
-- [x] Stage inspected daily group and commit milestone 1 (prepared; subject identifies milestone).
-- [ ] Stage inspected resource group and commit milestone 2.
+- [x] Stage inspected daily group and commit milestone 1.
+- [x] Stage inspected resource group and commit milestone 2 (prepared; subject identifies milestone).
 - [ ] Review residuals and push complete series once.
 
 ## Risks and verification
@@ -34,3 +34,13 @@ README skill gate: review truthful opening/stack/installation/day-to-day flags a
 ## Milestone 1 — fix: clarify recorded daily working time
 
 Completed heading/test/day-plan review. Fresh full suite: 265 passed in 24.49s; Ruff passed; strict mypy passed (21 source files); offline wheel/sdist built; diff check passed. Empty-data CLI rendered the new heading and explicit no-work guidance. Synthetic status verifier passed full-replay equality and zero-byte unchanged scans. Independent cache review: no blockers, 35 focused tests passed. README gate `update_in_same_change`: existing daily-format and cache/performance documentation repairs match source; stage daily-format repair here and resource coverage with milestone 2. Resource commit and one upstream push remain. Canonical sandbox incident no-new-learning registration and targeted check passed; external pre-existing ledger edits preserved.
+
+## Milestone 2 — perf: cache session state and prune overview history
+
+Milestone 1 committed as `48a8137`. Resource implementation and companion sources reviewed; no unsafe/generated paths found. Fresh main checks remain 265 passing tests, clean Ruff/strict mypy, successful offline wheel/sdist. Runtime evidence: one-file cold/warm/unchanged/full status replay agrees; warm/unchanged opened=0 and bytes_read=0. Installed schema-v4 frozen month containing DST fallback passes exact complete JSON parity: before 18.5216s, after 17.0709s; installation_changed=false. Cache review independently passed 35 tests with no blockers. README gate complete; cache privacy/alias migration and v4 compatibility accurately documented. Historical before/after and RED evidence remain in matching implementation plans.
+
+Warning: external canonical postmortem-memory ledger changed after this task's successful narrow registration/check. Later checks reported missing registration for this task's sandbox report and the CTO overview report; a subsequent read found invalid JSON at line 9455. Preserve external unrelated work and leave final-hash registration/CTO coverage verification outstanding until that ledger is valid and stable. No product validation failed. See the living sandbox report.
+
+Completed repository work has no implementation blocker. Remaining operational follow-ups: integrate source session cache with compatible v4 before installation; daemon whole-history persistence remains separate. No installed package/service/data was changed in this delivery. Rollback through ordinary revert; no schema migration. Commit this milestone, inspect final residuals, then perform one push to configured `origin/main`. Push outcome is reported in the final handoff; it cannot be recorded in this commit before it occurs.
+
+Exact automated checks: `.venv/bin/python -m pytest -q`, `.venv/bin/ruff check .`, `.venv/bin/mypy src`, `uv build --offline`, `git diff --check`. Direct/manual plan: source daily report on empty temporary data, status JSON/plain with private runtime storage, and the disposable status verifier; installed overview verifier against frozen inputs for day/week/DST month. Matching README, smoke tests, watcher docs, incident reports and prompts ship in milestone 2. Cursor continuation prompts: `prompts/codex-time-session-cache.md` and `prompts/cto-performance-handoff.md`.

@@ -20,6 +20,8 @@ def run(data: Path, *args: str) -> subprocess.CompletedProcess[str]:
             sys.executable,
             "-c",
             "from codex_time.cli import main; raise SystemExit(main())",
+            "--codex-home",
+            str(data.parent / "codex-fixture"),
             "--data-dir",
             str(data),
             "--state-dir",
@@ -42,11 +44,12 @@ def test_top_level_help_advertises_canonical_commands_only() -> None:
         "sessions",
         "history",
         "health",
+        "status",
         "resume",
     ]:
         assert name in text
     advertised = re.findall(r"^    (\S+)\s", text, re.MULTILINE)
-    for name in ["burn", "models", "day", "list", "report", "status"]:
+    for name in ["burn", "models", "day", "list", "report"]:
         assert name not in advertised
     assert "daemon" in text and "import-history" in text
 
@@ -82,7 +85,6 @@ def test_top_level_help_advertises_canonical_commands_only() -> None:
             ],
         ),
         ("report", "history", ["--from", "2026-10-07", "--to", "2026-10-06"]),
-        ("status", "health", ["--json"]),
     ],
 )
 def test_aliases_keep_output_exports_and_exit_codes(
@@ -197,3 +199,13 @@ def test_noninteractive_picker_guidance_uses_sessions_command(tmp_path: Path) ->
     result = run(tmp_path / "data", "resume")
     assert result.returncode == 2
     assert "codex-time sessions" in result.stderr and "codex-time list" not in result.stderr
+
+
+def test_status_keeps_health_keys_with_new_session_array(tmp_path: Path) -> None:
+    state = run(tmp_path / "data", "status", "--json")
+    health = run(tmp_path / "data", "health", "--json")
+    assert state.returncode == health.returncode == 0
+    cached, observer = json.loads(state.stdout), json.loads(health.stdout)
+    assert cached["sessions"] == [] and observer["sessions"] == 0
+    for field in ("daemon", "heartbeat", "pid", "live_diagnostic", "data_dir", "state_dir"):
+        assert cached[field] == observer[field]

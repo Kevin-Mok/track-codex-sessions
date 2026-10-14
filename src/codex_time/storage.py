@@ -82,6 +82,7 @@ class Store:
         self._embedded_quotas: list[QuotaObservation] = []
         self._quota_source: list[QuotaObservation] | None = None
         self._quota_offset = 0
+        self._timing_cache: tuple[tuple[int, ...] | None, Ledger] | None = None
 
     @staticmethod
     def _stat_key(path: Path) -> tuple[int, ...]:
@@ -135,17 +136,63 @@ class Store:
                 self._locked = False
                 fcntl.flock(lock, fcntl.LOCK_UN)
 
-    def load(self) -> Ledger:
+    def _read_ledger(self, *, timing_only: bool = False) -> Ledger:
         path = self.root / "ledger.json"
         try:
-            ledger = Ledger.model_validate_json(path.read_text()) if path.exists() else Ledger()
+            if not path.exists():
+                return Ledger()
+            if timing_only:
+                raw = json.loads(path.read_bytes())
+                if not isinstance(raw, dict):
+                    raise ValueError("expected ledger object")
+                raw.pop("quota_observations", None)
+                ledger = Ledger.model_validate(raw)
+            else:
+                ledger = Ledger.model_validate_json(path.read_bytes())
             if any(
                 sid != s.id or any(tid != t.id for tid, t in s.turns.items())
                 for sid, s in ledger.sessions.items()
             ):
                 raise ValueError("identifier/key mismatch")
+            return ledger
         except (OSError, ValueError, ValidationError) as exc:
             raise StoreError("invalid ledger.json; restore a valid backup before writing") from exc
+
+    def load_timing(self) -> Ledger:
+        """Read-only timing snapshot; no quota journal or historical serialization.
+
+        UI refreshes reuse the validated snapshot until the atomic ledger changes.
+        Writer paths always use load(), which validates every durable journal.
+        """
+        path = self.root / "ledger.json"
+        try:
+            stamp = self._stat_key(path)
+        except FileNotFoundError:
+            stamp = None
+        if self._timing_cache is None or self._timing_cache[0] != stamp:
+            self._timing_cache = (stamp, self._read_ledger(timing_only=True))
+        return self._timing_cache[1]
+
+    def summary(self) -> dict[str, object]:
+        """Health metadata without constructing historical turns or quota models."""
+        path = self.root / "ledger.json"
+        if not path.exists():
+            return {"sessions": 0, "diagnostics": []}
+        try:
+            raw = json.loads(path.read_bytes())
+            if not isinstance(raw, dict) or not isinstance(raw.get("sessions"), dict):
+                raise ValueError("invalid summary")
+            diagnostics = raw.get("diagnostics", [])
+            if not isinstance(diagnostics, list) or any(
+                not isinstance(item, str) for item in diagnostics
+            ):
+                raise ValueError("invalid diagnostics")
+            return {"sessions": len(raw["sessions"]), "diagnostics": diagnostics}
+        except (OSError, ValueError) as exc:
+            raise StoreError("invalid ledger.json; cannot read health summary") from exc
+
+    def load(self) -> Ledger:
+        ledger = self._read_ledger()
         embedded = {quota_key(q): q for q in ledger.quota_observations}
         ledger.quota_observations = list(embedded.values())
         self._embedded_quotas = ledger.quota_observations.copy()

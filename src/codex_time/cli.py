@@ -28,7 +28,6 @@ ALIASES = {
     "day": "projects",
     "list": "sessions",
     "report": "history",
-    "status": "health",
 }
 
 
@@ -45,14 +44,18 @@ def parser() -> argparse.ArgumentParser:
     result.add_argument("--timezone", default="America/Toronto")
     sub = result.add_subparsers(
         dest="command",
-        metavar="{overview,allowance,model-time,projects,sessions,history,health,resume,daemon,import-history}",
+        metavar="{overview,allowance,model-time,projects,sessions,history,status,health,resume,daemon,import-history}",
     )
     canonical: dict[str, argparse.ArgumentParser] = {}
     sub.add_parser("daemon", help="track independently of the UI")
     sub.add_parser("import-history", help="idempotently reconcile historical lifecycle turns")
     status = sub.add_parser("health", help="show observer health and accuracy diagnostics")
     status.add_argument("--json", action="store_true")
+    status.add_argument("--plain", action="store_true", help="ASCII output without emoji")
     canonical["health"] = status
+    state = sub.add_parser("status", help="read cached session state for external watchers")
+    state.add_argument("--json", action="store_true", help="versioned machine-readable state")
+    state.add_argument("--plain", action="store_true", help="ASCII output without emoji")
     sub.add_parser("resume", help="open the searchable session picker")
     for name in ("sessions", "history"):
         command = sub.add_parser(
@@ -151,7 +154,8 @@ def main() -> int:
     try:
         ZoneInfo(args.timezone)
     except (ZoneInfoNotFoundError, ValueError):
-        print(f"Unknown timezone: {args.timezone}", file=sys.stderr)
+        prefix = "" if getattr(args, "plain", False) else "⚠️ "
+        print(f"{prefix}Unknown timezone: {args.timezone}", file=sys.stderr)
         return 2
     try:
         store = Store(args.data_dir, args.state_dir)
@@ -163,21 +167,50 @@ def main() -> int:
             print(f"Imported {len(ledger.sessions)} sessions; no duplicate intervals.")
             for message in ledger.diagnostics:
                 print(message, file=sys.stderr)
+        elif command == "status":
+            from codex_time.session_status import session_status
+
+            def progress(message: str) -> None:
+                prefix = "" if args.plain else "⏳ "
+                print(prefix + message, file=sys.stderr, flush=True)
+
+            state_data = runtime_status(store)
+            state_data.update(session_status(home, store.runtime, progress))
+            if args.json:
+                print(json.dumps(state_data, ensure_ascii=False))
+            else:
+                entries = state_data["sessions"]
+                assert isinstance(entries, list)
+                prefix = "" if args.plain else "📋 "
+                freshness = "Fresh" if state_data["fresh"] else "Incomplete; retry status"
+                print(f"{prefix}{freshness} session state: {len(entries)} sessions")
+                print(f"Cache: {state_data['cache_path']}")
+                # Human output is bounded; JSON supplies every session and full messages.
+                for entry in sorted(
+                    entries, key=lambda item: str(item.get("last_updated") or ""), reverse=True
+                )[:20]:
+                    from codex_time.presentation import safe_text
+
+                    print(safe_text(
+                        f"{entry['session_id']}  {entry['status']:8}  "
+                        f"{entry['tty'] or '-'}  {entry['cwd']}"
+                    ))
+            if not state_data["fresh"]:
+                return 2
         elif command == "health":
             status = runtime_status(store)
-            ledger = store.load()
-            status["sessions"] = len(ledger.sessions)
-            status["diagnostics"] = ledger.diagnostics
+            status.update(store.summary())
             if args.json:
                 print(json.dumps(status, indent=2))
             else:
+                print("Observer health" if args.plain else "💓 Observer health")
                 for key, value in status.items():
                     print(f"{key}: {value}")
         elif command == "history":
             if args.start and args.end and args.end < args.start:
                 raise StoreError("report --to must be on or after --from")
             data = report(
-                store.load(),
+                store.load_timing(),
                 cwd=args.cwd,
                 all_directories=args.all_dirs,
                 archive=args.archive,
@@ -196,7 +229,7 @@ def main() -> int:
                 )
         elif command == "projects":
             daily_data = daily_report(
-                store.load(),
+                store.load_timing(),
                 selected_date=args.selected_date,
                 cwd=args.cwd,
                 archive=args.archive,
@@ -278,7 +311,7 @@ def main() -> int:
                 )
         elif command == "model-time":
             model_data = model_report(
-                store.load(),
+                store.load_timing(),
                 period=args.period,
                 selected_date=args.selected_date,
                 cwd=args.cwd,
@@ -305,7 +338,7 @@ def main() -> int:
                 )
         elif command == "sessions":
             rows = build_rows(
-                store.load(),
+                store.load_timing(),
                 observations(store),
                 cwd=args.cwd,
                 timezone_name=args.timezone,
@@ -344,10 +377,13 @@ def main() -> int:
                         f"{row.title}  {row.cwd}  [{row.quality}]"
                     )
         else:
-            run_ui(lambda: (store.load(), observations(store)), args.timezone, os.getcwd(), home)
+            run_ui(
+                lambda: (store.load_timing(), observations(store)), args.timezone, os.getcwd(), home
+            )
         return 0
     except (StoreError, OSError, ValueError) as error:
-        print(f"codex-time: {error}", file=sys.stderr)
+        prefix = "" if getattr(args, "plain", False) else "⚠️ "
+        print(f"{prefix}codex-time: {error}", file=sys.stderr)
         return 2
     except KeyboardInterrupt:
         return 130

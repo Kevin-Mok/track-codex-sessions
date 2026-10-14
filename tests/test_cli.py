@@ -58,6 +58,8 @@ def test_status_empty_and_bad_timezone(tmp_path: Path) -> None:
         "uv",
         "run",
         "codex-time",
+        "--codex-home",
+        str(tmp_path / "codex"),
         "--data-dir",
         str(tmp_path / "data"),
         "--state-dir",

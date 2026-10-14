@@ -228,7 +228,7 @@ def test_quota_ingestion_upgrade_privacy_archive_restart_incremental(tmp_path: P
     cache = {"version": 2, "files": {f"{stat.st_dev}:{stat.st_ino}": {"offset": stat.st_size}}}
     reader = RolloutReader(tmp_path / "home", cache)
     reader.scan(ledger)
-    assert len(ledger.quota_observations) == 2 and reader.checkpoints["version"] == 3
+    assert len(ledger.quota_observations) == 2 and reader.checkpoints["version"] == 4
     before = ledger.model_dump_json()
     reader.scan(ledger)
     assert ledger.model_dump_json() == before

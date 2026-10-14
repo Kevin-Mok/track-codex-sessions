@@ -57,6 +57,9 @@ class PendingWait(Model):
 
 class FileState(Model):
     offset: int = Field(default=0, ge=0)
+    size: int = Field(default=-1, ge=-1)
+    mtime_ns: int = Field(default=-1, ge=-1)
+    prefix_size: int = Field(default=256, ge=0, le=256)
     prefix: str = ""
     session_id: str = ""
     cwd: str = ""
@@ -81,7 +84,7 @@ class RolloutReader:
         self._quota_count = 0
         if checkpoints:
             files = checkpoints.get("files", {})
-            if checkpoints.get("version") == 3 and isinstance(files, dict):
+            if checkpoints.get("version") in (3, 4) and isinstance(files, dict):
                 for key, value in files.items():
                     try:
                         self._files[str(key)] = FileState.model_validate(value)
@@ -93,7 +96,7 @@ class RolloutReader:
     @property
     def checkpoints(self) -> dict[str, object]:
         return {
-            "version": 3,
+            "version": 4,
             "files": {key: value.model_dump(mode="json") for key, value in self._files.items()},
         }
 
@@ -128,14 +131,29 @@ class RolloutReader:
             stat = path.stat()
             key = f"{stat.st_dev}:{stat.st_ino}"
             state = self._files.setdefault(key, FileState())
-            if stat.st_size < state.offset or (
-                state.session_id and state.session_id not in ledger.sessions
+            if (
+                stat.st_size < max(state.offset, state.size)
+                or (state.session_id and state.session_id not in ledger.sessions)
+                or (stat.st_size == state.size and stat.st_mtime_ns != state.mtime_ns)
             ):
                 state = self._files[key] = FileState()
+            session = ledger.sessions.get(state.session_id)
+            if stat.st_size == state.size and stat.st_mtime_ns == state.mtime_ns:
+                if session:
+                    session.archived = archived
+                return
             with path.open("rb") as stream:
-                prefix = hashlib.sha256(stream.read(256)).hexdigest()
+                # Check only changed sources. A stable bounded prefix preserves
+                # detection of same-inode rewrites, including files shorter than 256B.
+                if not state.prefix or state.prefix_size == 0:
+                    state.prefix = ""
+                    state.prefix_size = min(256, stat.st_size)
+                prefix = hashlib.sha256(stream.read(state.prefix_size)).hexdigest()
                 if state.prefix and prefix != state.prefix:
                     state = self._files[key] = FileState()
+                    state.prefix_size = min(256, stat.st_size)
+                    stream.seek(0)
+                    prefix = hashlib.sha256(stream.read(state.prefix_size)).hexdigest()
                 state.prefix = prefix
                 stream.seek(state.offset)
                 while raw := stream.readline():
@@ -150,6 +168,8 @@ class RolloutReader:
                         self._event(cast(dict[str, object], record), state, ledger)
                     except (ValueError, TypeError, OverflowError):
                         diagnostic(ledger, "malformed rollout record skipped")
+            state.size = stat.st_size
+            state.mtime_ns = stat.st_mtime_ns
             session = ledger.sessions.get(state.session_id)
             if session:
                 session.archived = archived
