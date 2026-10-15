@@ -48,11 +48,13 @@ def test_ten_thousand_unfinished_sources_bound_queue_and_total_page() -> None:
     from codex_time.reconciliation import ScanScheduler
 
     discovered = 0
+
     def discover():
         nonlocal discovered
         for i in range(10_000):
             discovered += 1
             yield Path(f"source-{i}")
+
     scheduler = ScanScheduler(Reconciliation(discover, notifications=True))
     seen = set()
     for _ in range(100):
@@ -78,8 +80,11 @@ def test_event_priority_and_overflow_do_not_lose_continuations() -> None:
 
     sources = [Path(f"source-{i}") for i in range(200)]
     urgent = Path("urgent")
-    scheduler = ScanScheduler(Reconciliation(lambda: iter([*sources, urgent]), notifications=True),
-                              capacity=16, page_size=4)
+    scheduler = ScanScheduler(
+        Reconciliation(lambda: iter([*sources, urgent]), notifications=True),
+        capacity=16,
+        page_size=4,
+    )
     for _ in range(8):
         page = scheduler.take(0)
         scheduler.finish(page)
@@ -104,11 +109,79 @@ def test_discovery_and_notifications_share_one_page_budget() -> None:
     from codex_time.reconciliation import ScanScheduler
 
     events = [Path(f"event-{i}") for i in range(256)]
-    scheduler = ScanScheduler(Reconciliation(
-        lambda: (Path(f"source-{i}") for i in range(1000)), notifications=True,
-    ))
+    scheduler = ScanScheduler(
+        Reconciliation(
+            lambda: (Path(f"source-{i}") for i in range(1000)),
+            notifications=True,
+        )
+    )
     page = scheduler.take(0, notifications=events)
     assert len(page) == 128
     assert any(path in events for path in page)
     assert any(str(path).startswith("source-") for path in page)
     scheduler.finish([])
+
+
+def test_warm_event_deadline_is_anchored_and_deferred_work_can_sleep() -> None:
+    from codex_time.reconciliation import ScanScheduler
+
+    scheduler = ScanScheduler(
+        Reconciliation(lambda: iter(()), notifications=True), event_interval=60
+    )
+    assert scheduler.take(0) == []
+    scheduler.finish([])
+    path = Path("live")
+    for now in range(1, 61):
+        assert scheduler.take(now, notifications=[path]) == []
+        assert scheduler.queued_count == 1
+        assert scheduler.delay(now) > 0
+        scheduler.finish([])
+    assert scheduler.take(61, notifications=[path]) == [path]
+    scheduler.finish([])
+    assert scheduler.queued_count == 0
+
+
+def test_warm_event_interval_does_not_delay_startup_or_unfinished_records() -> None:
+    from codex_time.reconciliation import ScanScheduler
+
+    source = Path("large")
+    scheduler = ScanScheduler(
+        Reconciliation(lambda: iter([source]), notifications=True), event_interval=60
+    )
+    assert scheduler.take(0) == [source]
+    scheduler.finish([source])
+    assert scheduler.take(0.1) == [source]
+    scheduler.finish([])
+    assert scheduler.take(0.2) == []
+    scheduler.finish([])
+    assert not scheduler.reconciliation.initializing
+    assert scheduler.take(1, notifications=[source]) == []
+    scheduler.finish([])
+    assert scheduler.delay(1) > 1  # Pending deferred events must not force 100ms wakeups.
+    assert scheduler.take(61) == [source]
+    scheduler.finish([])
+
+
+def test_deferred_event_overflow_remains_bounded_and_reconciles_every_source() -> None:
+    from codex_time.reconciliation import ScanScheduler
+
+    sources = [Path(f"source-{i}") for i in range(1000)]
+    scheduler = ScanScheduler(
+        Reconciliation(lambda: iter(sources), notifications=True),
+        capacity=16,
+        page_size=4,
+        event_interval=60,
+    )
+    while scheduler.reconciliation.initializing or scheduler.queued_count:
+        scheduler.take(0)
+        scheduler.finish([])
+    seen = set()
+    for now in range(1, 601):
+        page = scheduler.take(now, notifications=sources if now == 1 else ())
+        assert len(page) <= 4
+        seen.update(page)
+        scheduler.finish(page[:1] if now < 20 else [])
+        assert scheduler.queued_count <= 16
+        if len(seen) == len(sources):
+            break
+    assert seen == set(sources)

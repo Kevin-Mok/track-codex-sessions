@@ -238,10 +238,31 @@ class Store:
         return {"sessions": len(ledger.sessions), "diagnostics": ledger.diagnostics}
 
     def picker_snapshot(self) -> Ledger:
+        """Reuse timing history until a saved generation changes or restore fallback."""
+        self._picker_generation: tuple[tuple[int, ...] | None, ...]
+        generation_parts: list[tuple[int, ...] | None] = []
+        for path in (
+            self.root / "layout.json",
+            self.root / "ledger.json",
+            self.runtime / "index.sqlite",
+            self.runtime / "index.sqlite-wal",
+        ):
+            try:
+                generation_parts.append(self._stat_key(path))
+            except FileNotFoundError:
+                generation_parts.append(None)
+        generation = tuple(generation_parts)
         now = monotonic()
-        if self._picker_snapshot is None or now >= self._picker_next_read:
+        if (
+            self._picker_snapshot is None
+            or now >= self._picker_next_read
+            or generation != self._picker_generation
+        ):
             self._picker_snapshot = self.load(include_evidence=False)
             self._picker_next_read = now + 60
+            # Retain the pre-read generation: a concurrent writer may change a
+            # snapshot already passed by load(), requiring another foreground read.
+            self._picker_generation = generation
         return self._picker_snapshot
 
     def _load_usage(self, ledger: Ledger) -> None:

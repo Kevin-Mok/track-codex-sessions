@@ -12,8 +12,10 @@ import argparse
 import asyncio
 import hashlib
 import json
+import math
 import os
 import shutil
+import signal
 import sqlite3
 import sys
 import tempfile
@@ -279,6 +281,67 @@ def make_metadata(data: Path, home: Path) -> dict[str, int]:
     return counts
 
 
+class RolloutEvents:
+    """Append fixed synthetic ignored messages; retain five counters/offsets."""
+
+    def __init__(self, home: Path, roots: list[str], interval: float) -> None:
+        if not math.isfinite(interval) or interval < 0:
+            raise ValueError("rollout event interval must be finite and nonnegative")
+        if len(roots) != 5:
+            raise ValueError("rollout event workload requires five original roots")
+        self.paths = [home / "sessions" / f"{sid}.jsonl" for sid in roots]
+        self.interval = interval
+        self.counts = [0] * len(roots)
+        self.events_written = 0
+        self.bytes_written = 0
+        self.tail_offsets: dict[str, int] = {}
+        self.body = "x" * 4096
+
+    async def run(self) -> None:
+        if not self.interval:
+            return
+        while True:
+            slot = self.events_written % len(self.paths)
+            record = (
+                dump(
+                    {
+                        "timestamp": datetime.now(UTC).isoformat(),
+                        "type": "response_item",
+                        "payload": {
+                            "type": "message",
+                            "role": "assistant",
+                            "content": [{"type": "output_text", "text": self.body}],
+                        },
+                    }
+                )
+                + "\n"
+            ).encode()
+            # No await occurs within a write: cancellation leaves complete lines
+            # and every count below follows a successful close/flush.
+            with self.paths[slot].open("ab") as output:
+                written = output.write(record)
+                offset = output.tell()
+                stamp = os.fstat(output.fileno())
+            if written != len(record):
+                raise OSError("synthetic rollout record was not completely written")
+            self.tail_offsets[f"{stamp.st_dev}:{stamp.st_ino}"] = offset
+            self.counts[slot] += 1
+            self.events_written += 1
+            self.bytes_written += written
+            await asyncio.sleep(self.interval)
+
+    def report(self) -> dict[str, Any]:
+        return {
+            "enabled": self.interval > 0,
+            "interval_seconds": self.interval,
+            "payload_bytes": len(self.body),
+            "roots": len(self.paths),
+            "per_root_event_counts": list(self.counts),
+            "events_written": self.events_written,
+            "bytes_written": self.bytes_written,
+        }
+
+
 class Smoke:
     def __init__(self, args: argparse.Namespace) -> None:
         self.args = args
@@ -293,6 +356,7 @@ class Smoke:
         self.last_poll: float | None = None
         self.max_poll_interval = 0.0
         self.daemon: asyncio.subprocess.Process | None = None
+        self.rollout_events: RolloutEvents | None = None
 
     def say(self, message: str) -> None:
         print(("" if self.args.plain else "⏱️ ") + message, file=sys.stderr, flush=True)
@@ -300,15 +364,65 @@ class Smoke:
     async def progress(self) -> None:
         while True:
             await asyncio.sleep(15)
-            self.say(f"{self.phase}: {time.monotonic() - self.began:.0f}s elapsed")
+            events = self.rollout_events
+            suffix = (
+                f"; synthetic rollout records={events.events_written}"
+                if events and events.interval
+                else ""
+            )
+            self.say(f"{self.phase}: {time.monotonic() - self.began:.0f}s elapsed{suffix}")
+
+    def rollout_tails_consumed(self, events: RolloutEvents) -> bool:
+        with closing(
+            sqlite3.connect((self.state / "index.sqlite").as_uri() + "?mode=ro", uri=True)
+        ) as db:
+            for identity, offset in events.tail_offsets.items():
+                row = db.execute(
+                    "SELECT json_extract(body,'$.offset') FROM checkpoints WHERE id=?", (identity,)
+                ).fetchone()
+                if row is None or row[0] is None or int(row[0]) < offset:
+                    return False
+        return True
+
+    def daemon_exit_error(self) -> RuntimeError:
+        assert self.daemon is not None
+        code = self.daemon.returncode
+        name = signal.Signals(-code).name if code is not None and code < 0 else "none"
+        return RuntimeError(
+            f"daemon exited unexpectedly: returncode={code}; signal={name}; "
+            f"daemon_log={self.root / 'daemon.log'}"
+        )
+
+    async def daemon_resources(self) -> dict[str, Any]:
+        assert self.daemon is not None
+        if self.daemon.returncode is not None:
+            raise self.daemon_exit_error()
+        try:
+            return resources(self.daemon.pid)
+        except (OSError, ValueError, KeyError) as exc:
+            # A child can exit after the returncode check or between /proc reads.
+            # Reap that child before reporting its exact status; retain failure
+            # if a live process's resource files cannot be sampled.
+            try:
+                await asyncio.wait_for(asyncio.shield(self.daemon.wait()), timeout=1)
+            except TimeoutError:
+                raise RuntimeError(
+                    f"daemon resource probe failed: {type(exc).__name__}; "
+                    f"daemon_log={self.root / 'daemon.log'}"
+                ) from exc
+            raise self.daemon_exit_error() from exc
+
+    async def resource_snapshot(self) -> dict[str, dict[str, Any]]:
+        return {
+            "daemon": await self.daemon_resources(),
+            "mock_server_and_harness": resources(os.getpid()),
+        }
 
     async def until(self, predicate: Callable[[], bool], *, timeout: float) -> None:
         async with asyncio.timeout(timeout):
             while not predicate():
                 if self.daemon is not None and self.daemon.returncode is not None:
-                    raise RuntimeError(
-                        f"daemon exited {self.daemon.returncode}; inspect daemon.log"
-                    )
+                    raise self.daemon_exit_error()
                 await asyncio.sleep(min(0.1, self.args.sample_seconds / 10))
 
     def states_are(self, expected: str) -> bool:
@@ -380,16 +494,15 @@ class Smoke:
         assert self.daemon is not None
         self.phase = f"{label}: {seconds:g}s actual Unix-socket window"
         self.say(self.phase)
-        pids = {"daemon": self.daemon.pid, "mock_server_and_harness": os.getpid()}
-        before = {name: resources(pid) for name, pid in pids.items()}
+        before = await self.resource_snapshot()
         peak = sum(value["rss_mib"] for value in before.values())
         began = time.monotonic()
         while time.monotonic() - began < seconds:
             await asyncio.sleep(min(1.0, seconds - (time.monotonic() - began)))
-            current = {name: resources(pid) for name, pid in pids.items()}
+            current = await self.resource_snapshot()
             peak = max(peak, sum(value["rss_mib"] for value in current.values()))
         wall = time.monotonic() - began
-        after = {name: resources(pid) for name, pid in pids.items()}
+        after = await self.resource_snapshot()
         detail = {}
         for name, value in after.items():
             detail[name] = {
@@ -552,7 +665,7 @@ class Smoke:
                         await self.until(names_ready, timeout=self.args.startup_timeout)
                     startup_done.set()
                     worker_resources = await startup_monitor
-                    daemon_resources = resources(self.daemon.pid)
+                    daemon_resources = await self.daemon_resources()
                     worker_resources["cumulative_cpu_seconds"] = max(
                         worker_resources["cumulative_cpu_seconds"], daemon_resources["cpu_seconds"]
                     )
@@ -561,9 +674,48 @@ class Smoke:
                         "daemon": daemon_resources,
                         "workers": worker_resources,
                     }
-                    result["active"] = await self.window(
-                        self.args.duration, "Five quiet roots working"
+                    events = RolloutEvents(
+                        self.home, list(self.original), self.args.rollout_event_seconds
                     )
+                    self.rollout_events = events
+                    producer = asyncio.create_task(events.run()) if events.interval else None
+                    try:
+                        label = (
+                            "Five roots with rollout events"
+                            if producer
+                            else "Five quiet roots working"
+                        )
+                        result["active"] = await self.window(self.args.duration, label)
+                    finally:
+                        if producer is not None:
+                            producer.cancel()
+                            try:
+                                await producer
+                            except asyncio.CancelledError:
+                                pass
+                    result["rollout_events"] = events.report()
+                    if producer is not None:
+                        self.phase = "Waiting for final synthetic rollout ingestion"
+                        self.say(self.phase)
+                        before = await self.resource_snapshot()
+                        draining_at = time.monotonic()
+                        await self.until(
+                            lambda: self.rollout_tails_consumed(events),
+                            timeout=2 * self.args.sample_seconds + 10,
+                        )
+                        after = await self.resource_snapshot()
+                        result["active_tail_drain"] = {
+                            "wall_seconds": time.monotonic() - draining_at,
+                            "cpu_seconds_by_process": {
+                                name: row["cpu_seconds"] - before[name]["cpu_seconds"]
+                                for name, row in after.items()
+                            },
+                            "daemon_logical_io_delta": {
+                                key: value - before["daemon"]["logical_io"][key]
+                                for key, value in after["daemon"]["logical_io"].items()
+                            },
+                        }
+                        result["rollout_events"]["tail_sources_consumed"] = len(events.tail_offsets)
                     if self.args.idle_seconds:
                         self.state_name = "idle"
                         await self.until(
@@ -638,7 +790,7 @@ class Smoke:
                             == instant(completion)
                             for sid, tid in self.turn_ids.items()
                         ),
-                        timeout=10,
+                        timeout=2 * self.args.sample_seconds + 10,
                     )
                     result["completion_timestamp"] = completion
                 finally:
@@ -701,7 +853,12 @@ class Smoke:
         result["notes"] = [
             "Aggregate includes daemon and mock-server harness process.",
             "Startup/backfill resources are separate from the active window.",
-            "OS notification ingestion and actual Unix reconnect are exercised.",
+            "OS notification ingestion is exercised.",
+            (
+                "Reconnect cycles skipped (--skip-cycles)."
+                if self.args.skip_cycles
+                else "Actual Unix reconnect cycles are exercised."
+            ),
             "The health freshness probe uses a separate disposable runtime directory.",
         ]
         (self.root / "report.json").write_text(json.dumps(result, indent=2) + "\n")
@@ -731,6 +888,12 @@ def main() -> None:
     parser.add_argument("--work-dir", type=Path, default=None)
     parser.add_argument("--duration", type=float, default=300)
     parser.add_argument("--idle-seconds", type=float, default=0)
+    parser.add_argument(
+        "--rollout-event-seconds",
+        type=float,
+        default=0,
+        help="append ignored 4KiB synthetic messages at this active-work interval (0 disables)",
+    )
     parser.add_argument("--sample-seconds", type=float, default=60)
     parser.add_argument("--startup-timeout", type=float, default=600)
     parser.add_argument("--timeout", type=float, default=1800)
@@ -746,6 +909,8 @@ def main() -> None:
     args = parser.parse_args()
     args.executable = args.executable.expanduser().absolute()
     args.work_dir = args.work_dir or Path(tempfile.mkdtemp(prefix="codex-service-smoke-"))
+    if not math.isfinite(args.rollout_event_seconds) or args.rollout_event_seconds < 0:
+        parser.error("rollout event interval must be finite and nonnegative (0 disables)")
     if not 0 < args.sample_seconds <= 60 or min(args.duration, args.idle_seconds) < 0:
         parser.error("sampling must be in (0,60] seconds and windows nonnegative")
     try:
@@ -761,6 +926,24 @@ def main() -> None:
         print(f"Active CPU: {measured['cpu_percent_one_core']:.3f}% of one core")
         print(f"Aggregate RSS: {measured['rss_mib']:.2f} MiB")
         print(f"Actual sampling uncertainty: {report['runtime_uncertainty_seconds']:.3f}s")
+        if report["rollout_events"]["enabled"]:
+            events = report["rollout_events"]
+            print(
+                f"Synthetic rollout events: {events['events_written']} records, "
+                f"{events['bytes_written']} bytes"
+            )
+            drain = report["active_tail_drain"]
+            cpu = drain["cpu_seconds_by_process"]
+            io = drain["daemon_logical_io_delta"]
+            print(
+                ("" if args.plain else "⏳ ")
+                + f"Post-active drain: {drain['wall_seconds']:.3f}s wall (outside active window)"
+            )
+            print(
+                f"  Daemon CPU: {cpu['daemon']:.3f}s; "
+                f"harness CPU: {cpu['mock_server_and_harness']:.3f}s"
+            )
+            print(f"  Logical I/O: read {io['rchar']} B, write {io['wchar']} B (daemon)")
         print(f"Evidence: lifecycle and 2.125s precise wait preserved; artifacts: {args.work_dir}")
         for finding in report["unvalidated_or_misses"]:
             print(("" if args.plain else "⚠️ ") + finding)

@@ -1,0 +1,241 @@
+{
+  "scope": "Final v9 source/package checks, separately scoped v8 fixture resources and approved v9 deployment with complete historical audits and natural300s runtime window. Controlled production idle/five-root and full catch-up remain unproven.",
+  "cwd": "/home/kevin/coding/track-codex-sessions/.worktrees/incremental-tracking",
+  "checks": [
+    {
+      "command": "uv run pytest -q > /tmp/codex-time-v7-final-pytest.log 2>&1",
+      "tool_session": 70214,
+      "exit_status": 0,
+      "summary": "453 passed in 76.34s (0:01:16)",
+      "raw_log": "/tmp/codex-time-v7-final-pytest.log",
+      "completion_chunk": "13cc3f"
+    },
+    {
+      "command": "uv run mypy src/codex_time",
+      "completion_chunk": "448700",
+      "exit_status": 0,
+      "summary": "Success: no issues found in 34 source files"
+    },
+    {
+      "command": "uv run ruff check .",
+      "completion_chunk": "68ba9f",
+      "exit_status": 0,
+      "summary": "All checks passed!"
+    },
+    {
+      "command": "git diff --check",
+      "completion_chunk": "ae8275",
+      "exit_status": 0,
+      "summary": "No output; exit status 0."
+    },
+    {
+      "command": "uv build --wheel --out-dir /tmp/codex-time-final-dist-v7",
+      "completion_chunk": "700510",
+      "exit_status": 0,
+      "summary": "Successfully built codex_time-0.1.0-py3-none-any.whl"
+    },
+    {
+      "command": "uv run python scripts/token-smoke.py --executable /tmp/codex-time-final-packaged-v7/bin/codex-time --scenario verify",
+      "tool_session": 66548,
+      "completion_chunk": "93acaf",
+      "exit_status": 0,
+      "summary": "1,320,000 fixturetokens;USD2.91;CAD3.9285 at1.35; periods/child/auto-review/replay/read-only passed",
+      "raw_log": "/tmp/codex-time-token-smoke-v7.log"
+    },
+    {
+      "command": "uv run python scripts/service-smoke.py --executable /tmp/codex-time-final-packaged-v7/bin/codex-time --fixture /tmp/codex-benchmark-1x/fixture --work-dir /tmp/codex-time-final-service-v7 --metadata-fixture --duration 300 --idle-seconds 300 --plain --json",
+      "tool_session": 12255,
+      "completion_chunk": "e25fbb",
+      "exit_status": 0,
+      "summary": "Both300sresourcewindows/knownwait/lifecycle/tokenjournals/reconnect/65shealth/gracefulexitpassed; source6b787...",
+      "report": "/tmp/codex-time-final-service-v7.json"
+    }
+  ],
+  "v6_package_source_sha256": "5d344eda64c792bc0ac7e18c692e3b08ae0676281ab9af097e35384973594de1",
+  "previous_v6_source_check": {
+    "command": "uv run pytest -q > /tmp/codex-time-v6-final-pytest.log 2>&1",
+    "tool_session": 24639,
+    "exit_status": 0,
+    "summary": "449 passed in 73.23s (0:01:13)",
+    "raw_log": "/tmp/codex-time-v6-final-pytest.log"
+  },
+  "previous_v6_harness_check": {
+    "command": "uv run pytest -q > /tmp/codex-time-v6-harness-final-pytest.log 2>&1",
+    "tool_session": 45577,
+    "exit_status": 0,
+    "summary": "451 passed in 77.28s (0:01:17)",
+    "raw_log": "/tmp/codex-time-v6-harness-final-pytest.log",
+    "completion_chunk": "0ed1aa"
+  },
+  "v7_package_source_sha256": "6b787ce50cfb05dd46320164c115fd3bf7312f3e3cd7d29f845281649366af71",
+  "v8": {
+    "state": "source_and_wheel_green_resources_pending",
+    "source_content_digest": "2c2497d33d58d081572f298e02c06eec503866066d9a202b2496430ac7e0b3c6",
+    "wheel_archive_sha256": "236bfbb5262f6a4f51678f14d11fed24f28c435f9231fca101200b6a0f3fd715",
+    "source_files": 35,
+    "per_file_source_package_equal": true,
+    "frozen_source": "/tmp/codex-time-frozen-final-v8/src",
+    "executable": "/tmp/codex-time-final-packaged-v8/bin/codex-time",
+    "full_suite": {
+      "command": "uv run pytest -q",
+      "passed": 465,
+      "seconds": 83.85,
+      "exit_code": 0,
+      "log": "/tmp/codex-v8-final-pytest.log",
+      "scope": "Final core source/wheel; subsequent human-only harness summary patch gets separate focused verification"
+    },
+    "checks": [
+      {
+        "command": "uv run mypy src/codex_time",
+        "result": "success, no issues in34sourcefiles",
+        "exit_code": 0
+      },
+      {
+        "command": "uv run ruff check .",
+        "result": "all checks passed before human-summary follow-up",
+        "exit_code": 0
+      },
+      {
+        "command": "uv build --wheel --out-dir /tmp/codex-time-final-dist-v8",
+        "result": "wheelbuilt",
+        "exit_code": 0
+      },
+      {
+        "command": "git diff --check",
+        "result": "no output",
+        "exit_code": 0
+      }
+    ],
+    "red_logs": [
+      "/tmp/codex-v8-strengthened-red.log",
+      "/tmp/codex-real-fd-red.log",
+      "/tmp/codex-lost-wake-red.log",
+      "/tmp/codex-v8-rollout-event-red.log",
+      "/tmp/codex-v8-human-summary-red.log"
+    ],
+    "focused_green": [
+      {
+        "command": "uv run pytest -q tests/test_daemon.py tests/test_reconciliation.py",
+        "passed": 22,
+        "seconds": 1.4,
+        "exit_code": 0
+      },
+      {
+        "command": "uv run pytest -q tests/test_service_smoke.py",
+        "passed": 11,
+        "seconds": 12.91,
+        "exit_code": 0,
+        "scope": "before human-summary follow-up"
+      }
+    ]
+  },
+  "v9": {
+    "state": "deployed_and_verified_in_documented_scopes",
+    "full_suite": {
+      "command": "uv run pytest -q",
+      "passed": 475,
+      "seconds": 97.56,
+      "exit_code": 0,
+      "log": "/tmp/codex-v9-final-pytest.log"
+    },
+    "checks": [
+      {
+        "command": "uv run mypy src/codex_time",
+        "result": "No issues in 34 source files",
+        "exit_code": 0
+      },
+      {
+        "command": "uv run ruff check .",
+        "result": "All checks passed",
+        "exit_code": 0
+      },
+      {
+        "command": "git diff --check",
+        "result": "No output",
+        "exit_code": 0
+      },
+      {
+        "command": "uv build --wheel --out-dir /tmp/codex-time-final-dist-v9",
+        "result": "Successfully built codex_time-0.1.0-py3-none-any.whl",
+        "exit_code": 0
+      }
+    ],
+    "picker_red_log": "/tmp/codex-v8-picker-cache-red.log",
+    "picker_green_log": "/tmp/codex-v8-picker-green.log",
+    "focused_picker_passed": 31,
+    "source_content_sha256": "fc3aabd983bc36ef5296199f020ae111948635a9b1fb338de5978dbff0a22c82",
+    "wheel_archive_sha256": "3fd036a75c0ef4752a1e066bb66da3cbafdeb3bed4911354b3063a6a5f51941a",
+    "packaged_parity": {
+      "exit_code": 0,
+      "passed": true,
+      "commands": 71,
+      "artifact": "/tmp/codex-time-final-parity-v9.json"
+    },
+    "pty": {
+      "exit_code": 0,
+      "passed": true,
+      "refresh_seconds": 0.8634832360548899,
+      "artifact": "/tmp/codex-time-final-picker-v9.json"
+    },
+    "functional_socket": {
+      "exit_code": 0,
+      "artifact": "/tmp/codex-time-final-service-v9-short.json",
+      "scope": "Five-second windows only; not CPU acceptance"
+    }
+  },
+  "final_harness_note_followup": {
+    "scope": "Output-only skipped-cycle note correction after the full 475-test v9 source check; package bytes unchanged",
+    "red": {
+      "command": "uv run pytest -q tests/test_service_smoke.py::test_skipped_reconnect_is_reported_without_claiming_it_ran",
+      "failed": 1,
+      "log": "/tmp/codex-v8-skipped-reconnect-red.log",
+      "expected": "Missing explicit skipped-cycle note"
+    },
+    "green": {
+      "command": "uv run pytest -q tests/test_service_smoke.py",
+      "passed": 14,
+      "seconds": 28.24,
+      "exit_code": 0,
+      "log": "/tmp/codex-v8-service-smoke-final14.log"
+    },
+    "ruff_exit_code": 0,
+    "diff_check_exit_code": 0
+  },
+  "final_review": {
+    "verified": 8,
+    "incorrect": 0,
+    "unresolved": 1,
+    "unresolved_scope": "Controlled production idle/five-root and complete source/SQL catch-up; not claimed"
+  },
+  "final_learning": {
+    "redesign_sha256": "991d1ebebc9682640308c8bcdf603997870bb4ea17e44408372b97f48f4c398b",
+    "tooling_sha256": "b38d34a074e5ace8a1206d017fc7349e69e681b7d9fc2cb554f762c467b372b6",
+    "targeted_check_exit_codes": [
+      0,
+      0
+    ],
+    "errors": [],
+    "refresh_exit_code": 0,
+    "refresh_log": "/tmp/codex-time-required-refresh-v9-live-final.log"
+  },
+  "commit_session": {
+    "thread_id": "01a13b8f-7fe2-7a82-bd16-14b6dd49ff1e",
+    "scope": "Direct-write fallback; helper cannot detect orchestrated writes. Parent/delegated source/test/docs/plan/prompt/harness work reviewed against33ce9ed.",
+    "subject": "perf: reduce tracker wakeups and persistence",
+    "branch": "perf/incremental-tracking",
+    "upstream": "origin/perf/incremental-tracking",
+    "focused_pytest": {
+      "passed": 63,
+      "seconds": 33.35,
+      "exit_code": 0,
+      "log": "/tmp/codex-commit-session-pytest.log"
+    },
+    "mypy": {
+      "files": 34,
+      "exit_code": 0
+    },
+    "ruff_exit_code": 0,
+    "diff_check_exit_code": 0,
+    "readme_gate": "pass_no_change"
+  }
+}

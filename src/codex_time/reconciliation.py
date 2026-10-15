@@ -75,13 +75,18 @@ class ScanScheduler:
         *,
         capacity: int = 4096,
         page_size: int = 128,
+        event_interval: float = 0,
     ) -> None:
+        if not 0 <= event_interval <= 60:
+            raise ValueError("warm event interval must be between zero and 60 seconds")
         if capacity < 1 or not 0 < page_size <= capacity:
             raise ValueError("scan page must be positive and fit the pending capacity")
         self.reconciliation = reconciliation
         self.pending = pending if pending is not None else deque()
         self.queued = queued if queued is not None else set()
         self.capacity, self.page_size = capacity, page_size
+        self.event_interval = event_interval
+        self._deferred: dict[Path, float] = {}
         self._events: deque[Path] = deque()
         self._event_set: set[Path] = set()
         self._page: list[Path] = []
@@ -91,13 +96,21 @@ class ScanScheduler:
     def queued_count(self) -> int:
         return len(self.pending) + len(self._page)
 
-    def _admit(self, path: Path, *, event: bool = False) -> None:
+    def _admit(
+        self, path: Path, *, event: bool = False, now: float = 0, defer: bool = False
+    ) -> None:
         if path not in self.queued:
             if self.queued_count >= self.capacity:
                 self._overflow = True
                 return
             self.pending.append(path)
             self.queued.add(path)
+            if event and defer:
+                # Anchor to the first notification. Repeated writes cannot keep
+                # moving an existing source's admission deadline into the future.
+                self._deferred[path] = now + self.event_interval
+        if event and not defer:
+            self._deferred.pop(path, None)
         if event and path not in self._event_set:
             self._event_set.add(path)
             self._events.append(path)
@@ -106,36 +119,90 @@ class ScanScheduler:
         self.pending.remove(path)
         self.queued.remove(path)
         self._event_set.discard(path)
+        self._deferred.pop(path, None)
         self._page.append(path)
 
+    def _ready(self, path: Path, now: float) -> bool:
+        return self._deferred.get(path, now) <= now
+
+    def _take_events(self, now: float, limit: int) -> None:
+        for _ in range(len(self._events)):
+            if len(self._page) >= limit:
+                break
+            path = self._events.popleft()
+            if path not in self._event_set:
+                continue
+            if self._ready(path, now):
+                self._select(path)
+            else:
+                self._events.append(path)
+
     def take(
-        self, now: float, *, notifications: Iterable[Path] = (), overflow: bool = False
+        self,
+        now: float,
+        *,
+        notifications: Iterable[Path] = (),
+        overflow: bool = False,
+        immediate: bool = False,
     ) -> list[Path]:
         if self._page:
             raise RuntimeError("finish the current scan before taking another page")
+        defer = bool(self.event_interval) and not immediate and not self.reconciliation.initializing
         for path in notifications:
-            self._admit(path, event=True)
+            self._admit(path, event=True, now=now, defer=defer)
         lost = overflow or self._overflow
         self._overflow = False
         available = self.capacity - self.queued_count
         for path in self.reconciliation.take(now, overflow=lost, limit=available):
             self._admit(path)
         event_budget = max(1, self.page_size // 2)
-        while self._events and len(self._page) < event_budget:
-            path = self._events.popleft()
-            if path in self._event_set:
-                self._select(path)
+        self._take_events(now, event_budget)
         remaining = self.page_size - len(self._page)
-        work = list(islice(
-            (path for path in self.pending if path not in self._event_set), remaining
-        ))
+        work = list(
+            islice(
+                (
+                    path
+                    for path in self.pending
+                    if path not in self._event_set and self._ready(path, now)
+                ),
+                remaining,
+            )
+        )
         for path in work:
             self._select(path)
-        while self._events and len(self._page) < self.page_size:
-            path = self._events.popleft()
-            if path in self._event_set:
-                self._select(path)
+        self._take_events(now, self.page_size)
         return list(self._page)
+
+    def delay(self, now: float) -> float:
+        """Sleep until ready work, a fixed event deadline or reconciliation.
+
+        A deferred-only queue must not cause the daemon's old 100ms retry loop.
+        Full queues cannot advance discovery until one of their events is ready.
+        """
+        if any(self._ready(path, now) for path in self.pending):
+            return 0.1
+        delays = [deadline - now for deadline in self._deferred.values()]
+        if self.queued_count < self.capacity:
+            delays.append(self.reconciliation.delay(now))
+        return max(0.01, min(delays, default=self.reconciliation.delay(now)))
+
+    def acknowledge(self, paths: Iterable[Path], unfinished: Iterable[Path] = ()) -> None:
+        """Retire events already consumed by a minute live-source scan.
+
+        Otherwise a deferred notification could reread the same active source a
+        few seconds after sampling. Large unfinished sources remain ready work.
+        """
+        if self._page:
+            raise RuntimeError("finish the current scan before acknowledging live sources")
+        for path in paths:
+            if path in self.queued:
+                self.pending.remove(path)
+                self.queued.remove(path)
+            self._event_set.discard(path)
+            self._deferred.pop(path, None)
+        self._events = deque(path for path in self._events if path in self._event_set)
+        for path in unfinished:
+            self._admit(path)
 
     def finish(self, unfinished: Iterable[Path]) -> None:
         expected = set(self._page)

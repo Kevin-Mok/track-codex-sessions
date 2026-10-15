@@ -91,8 +91,17 @@ async def run_daemon(
         loop.add_signal_handler(sig, stop.set)
     wake = asyncio.Event()
     watcher = ChangeWatcher(home)
+
+    def notification_ready() -> None:
+        # Selector readers are level-triggered. Leave unread bytes queued, but
+        # disarm immediately so coalescing sleeps or socket awaits cannot spin
+        # thousands of callbacks before the next bounded drain.
+        if watcher.fd is not None:
+            loop.remove_reader(watcher.fd)
+        wake.set()
+
     if watcher.fd is not None:
-        loop.add_reader(watcher.fd, wake.set)
+        loop.add_reader(watcher.fd, notification_ready)
     client = LiveClient(home, socket_path, sample_seconds=sample_seconds)
     fx_task: asyncio.Task[FXSnapshot] | None = None
     try:
@@ -111,7 +120,9 @@ async def run_daemon(
                 reader.source_paths,
                 notifications=watcher.available and not watcher.needs_reconciliation,
             )
-            scheduler = ScanScheduler(reconciliation, pending, queued)
+            scheduler = ScanScheduler(
+                reconciliation, pending, queued, event_interval=sample_seconds
+            )
             next_sample = 0.0
             next_heartbeat = 0.0
             next_metadata = 0.0
@@ -122,13 +133,21 @@ async def run_daemon(
             startup = True
             while not stop.is_set():
                 now = loop.time()
+                # A notification during client.poll() must survive until this
+                # drain. Clearing at the end of the loop would erase its wake
+                # while its self-disarmed descriptor still has unread bytes.
+                wake.clear()
                 paths, overflow = watcher.drain()
+                if watcher.fd is not None:
+                    loop.add_reader(watcher.fd, notification_ready)
                 reconciliation.notifications = (
                     watcher.available and not watcher.needs_reconciliation
                 )
                 # Keep missed-event reconciliation bounded with healthy inotify;
                 # startup, overflow and unavailable notifications reconcile fully.
-                page = scheduler.take(now, notifications=paths, overflow=overflow)
+                page = scheduler.take(
+                    now, notifications=paths, overflow=overflow, immediate=startup
+                )
                 if page:
                     reader.progress = lambda message, startup=startup: (
                         index.progress(message) if startup else None
@@ -170,10 +189,8 @@ async def run_daemon(
                     active_ids = ids
                     active_paths = set(index.current_sources(ids))
                     active_paths.update(current_rollouts(home, ids))
-                    for path in reader.scan_paths(ledger, active_paths):
-                        if len(pending) < 4096 and path not in queued:
-                            pending.append(path)
-                            queued.add(path)
+                    unfinished = reader.scan_paths(ledger, active_paths)
+                    scheduler.acknowledge(active_paths, unfinished)
                     if client.diagnostic:
                         diagnostic(ledger, client.diagnostic)
                     observer.apply(ledger, samples)
@@ -213,20 +230,15 @@ async def run_daemon(
                 startup = startup and bool(
                     pending or reconciliation.initializing or metadata_index.get("pending")
                 )
-                wake.clear()
-                timeout = (
-                    0.1
-                    if pending
-                    else max(
-                        0.01,
-                        min(
-                            loop.time() + reconciliation.delay(loop.time()),
-                            next_sample,
-                            next_heartbeat,
-                            next_metadata,
-                        )
-                        - loop.time(),
+                timeout = max(
+                    0.01,
+                    min(
+                        loop.time() + scheduler.delay(loop.time()),
+                        next_sample,
+                        next_heartbeat,
+                        next_metadata,
                     )
+                    - loop.time(),
                 )
                 wake_task = asyncio.create_task(wake.wait())
                 stop_task = asyncio.create_task(stop.wait())

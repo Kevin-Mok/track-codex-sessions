@@ -4,12 +4,15 @@ import gc
 import json
 import os
 import sqlite3
+from datetime import UTC, datetime
 from pathlib import Path
 
 import pytest
 
+import codex_time.incremental_storage as storage
+from codex_time.incremental_storage import IndexedStore
 from codex_time.metadata import refresh_metadata
-from codex_time.models import Ledger
+from codex_time.models import Ledger, Session
 
 
 def databases(home: Path, count: int = 1000) -> None:
@@ -254,3 +257,145 @@ def test_new_historical_child_is_classified_before_its_edge_page(tmp_path: Path)
     assert refresh_metadata(tmp_path, ledger, active_ids=[], cursors={}, batch_size=128)
     assert ledger.sessions["s10"].is_child
     assert ledger.sessions["s10"].parent_id == "external-parent"
+
+
+def test_unchanged_indexed_metadata_pages_and_active_turns_do_not_load_sessions(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    home = tmp_path / "home"
+    home.mkdir()
+    databases(home, 260)
+    with sqlite3.connect(home / "state_1.sqlite") as db:
+        db.execute("INSERT INTO thread_spawn_edges VALUES ('s0','s1')")
+    with sqlite3.connect(home / "thread_history_1.sqlite") as db:
+        db.executemany(
+            "INSERT INTO thread_turns VALUES ('s259',?,'completed',1700000000,1700000005)",
+            ((f"old-{i}",) for i in range(20)),
+        )
+    (home / "session_index.jsonl").write_text(
+        json.dumps({"id": "s0", "thread_name": "Explicit name"}) + "\n"
+    )
+    with IndexedStore(tmp_path / "data", tmp_path / "state", cache_size=2) as index:
+        cursors, names = index.metadata_read()
+
+        def refresh() -> bool:
+            pending = refresh_metadata(
+                home,
+                index.ledger,
+                row_changed=index.row_changed,
+                active_ids=["s259"],
+                cursors=cursors,
+                index_state=names,
+                title_get=index.title_get,
+                title_put=index.title_put,
+                batch_size=128,
+            )
+            index.metadata_put(cursors, names)
+            index.flush()
+            return pending
+
+        while refresh():
+            pass
+        assert index.ledger.sessions["s0"].title == "Explicit name"
+        assert index.ledger.sessions["s1"].parent_id == "s0"
+        assert len(index.ledger.sessions["s259"].turns) == 21
+        index.flush()
+        counts: dict[str, int] = {}
+        original_get = storage.Sessions.__getitem__
+        original_read = storage.read_session
+        original_dump = Session.model_dump_json
+
+        def counted_get(self, sid):
+            counts["session_gets"] = counts.get("session_gets", 0) + 1
+            return original_get(self, sid)
+
+        def counted_read(*args, **kwargs):
+            counts["session_deserializations"] = counts.get("session_deserializations", 0) + 1
+            return original_read(*args, **kwargs)
+
+        def counted_dump(self, *args, **kwargs):
+            counts["session_serializations"] = counts.get("session_serializations", 0) + 1
+            return original_dump(self, *args, **kwargs)
+
+        with monkeypatch.context() as patch:
+            patch.setattr(storage.Sessions, "__getitem__", counted_get)
+            patch.setattr(storage, "read_session", counted_read)
+            patch.setattr(Session, "model_dump_json", counted_dump)
+            assert refresh()  # A fresh history page plus every old active-session turn.
+            assert counts == {}, f"unchanged metadata must not touch session models: {counts}"
+
+
+def test_indexed_pending_names_renames_and_child_turns_replay_after_snapshot_restore(
+    tmp_path: Path,
+) -> None:
+    home = tmp_path / "home"
+    home.mkdir()
+    databases(home, 2)
+    with sqlite3.connect(home / "state_1.sqlite") as db:
+        db.execute("DELETE FROM threads WHERE id='s1'")
+        db.execute("INSERT INTO thread_spawn_edges VALUES ('s0','s1')")
+    names_path = home / "session_index.jsonl"
+    names_path.write_text(json.dumps({"id": "s1", "thread_name": "Pending name"}) + "\n")
+    root, state = tmp_path / "data", tmp_path / "state"
+    with IndexedStore(root, state) as index:
+        cursors, names = index.metadata_read()
+
+        def refresh() -> None:
+            refresh_metadata(
+                home,
+                index.ledger,
+                row_changed=index.row_changed,
+                active_ids=["s1"],
+                cursors=cursors,
+                index_state=names,
+                title_get=index.title_get,
+                title_put=index.title_put,
+            )
+            index.metadata_put(cursors, names)
+            index.flush()
+
+        refresh()
+        assert "s1" not in index.ledger.sessions
+        assert index.title_get("s1") == "Pending name"
+        for identity in ("turn:s1:t", "edge:s1"):
+            assert index.db.execute("SELECT 1 FROM rows WHERE id=?", (identity,)).fetchone() is None
+        at = datetime.fromtimestamp(1700000000, UTC)
+        index.ledger.sessions["s1"] = Session(
+            id="s1", cwd="/fixture", created=at, updated=at, title="Before metadata"
+        )
+        index.flush()
+        snapshot = storage.session_path(root, "s1")
+        original = snapshot.read_bytes()
+        with sqlite3.connect(home / "state_1.sqlite") as db:
+            db.execute(
+                "INSERT INTO threads VALUES ('s1','/fixture',1700000000,1700000010,'Fallback')"
+            )
+        refresh()
+        assert index.ledger.sessions["s1"].title == "Pending name"
+        assert index.ledger.sessions["s1"].parent_id == "s0"
+        assert index.ledger.sessions["s1"].turns["t"].end is not None
+        with names_path.open("a") as output:
+            output.write(json.dumps({"id": "s1", "thread_name": "Renamed explicit"}) + "\n")
+        refresh()
+        assert index.ledger.sessions["s1"].title == "Renamed explicit"
+        with sqlite3.connect(home / "state_1.sqlite") as db:
+            db.execute("UPDATE threads SET name='Changed fallback' WHERE id='s1'")
+        refresh()
+        assert index.ledger.sessions["s1"].title == "Renamed explicit"
+    snapshot.write_bytes(original)
+    with IndexedStore(root, state) as index:
+        cursors, names = index.metadata_read()
+        refresh_metadata(
+            home,
+            index.ledger,
+            row_changed=index.row_changed,
+            active_ids=["s1"],
+            cursors=cursors,
+            index_state=names,
+            title_get=index.title_get,
+            title_put=index.title_put,
+        )
+        restored = index.ledger.sessions["s1"]
+        assert restored.title == "Renamed explicit"
+        assert restored.is_child and restored.parent_id == "s0"
+        assert restored.turns["t"].end is not None

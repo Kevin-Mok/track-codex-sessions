@@ -1,0 +1,3 @@
+# Task: incremental Codex tracking
+
+Implement the user-supplied "Minimize Codex tracking overhead" prompt, with plans/incremental-tracking.md as the decision/progress record. Preserve all deployed features from base 6da806f, precise lifecycle/wait evidence and all history. Use incremental changed-session persistence, bounded exact disk indexes/caches, notifications and <=60-second fallback. Version and verify migration/backups/rollback. No raw conversation or auth data. Deliver code/tests, reusable benchmark harness, README/smoke/migration docs, measured performance table and checks.md/progress.md. All acceptance checkboxes in the plan require evidence; unmet targets remain explicitly unresolved. Review with evidence-reviewer before completion.

@@ -324,9 +324,9 @@ def _threads(
                 and not row_changed("thread:" + sid, json.dumps(dict(row), sort_keys=True))
                 and sid in ledger.sessions
             ):
-                explicit = title_get(sid) if title_get is not None else None
-                if explicit is not None:
-                    ledger.sessions[sid].title = explicit
+                # Index-name appends update existing sessions directly. Changed or
+                # newly discovered rows apply pending names below; unchanged rows
+                # must not deserialize a full historical session just for its title.
                 continue
             created, updated = _time(row, "created_at"), _time(row, "updated_at")
             fields = {key: row[key] for key in row.keys()}
@@ -371,14 +371,14 @@ def _threads(
         )
         pending = pending or edge_pending
         for row in rows:
-            child_session = ledger.sessions.get(row["child_thread_id"])
-            if child_session is None:
+            if row["child_thread_id"] not in ledger.sessions:
                 continue
             if row_changed is not None and not row_changed(
                 "edge:" + str(row["child_thread_id"]), json.dumps(dict(row), sort_keys=True)
             ):
                 continue
-            if child_session is not None and isinstance(row["parent_thread_id"], str):
+            child_session = ledger.sessions[row["child_thread_id"]]
+            if isinstance(row["parent_thread_id"], str):
                 child_session.parent_id = row["parent_thread_id"]
                 child_session.is_child = True
     return pending
@@ -411,14 +411,14 @@ def _turns(
         batch_size=batch_size,
     )
     for row in rows:
-        session = ledger.sessions.get(row["thread_id"])
-        if session is None:
+        if row["thread_id"] not in ledger.sessions:
             continue
         if row_changed is not None and not row_changed(
             "turn:" + str(row["thread_id"]) + ":" + str(row["turn_id"]),
             json.dumps(dict(row), sort_keys=True),
         ):
             continue
+        session = ledger.sessions[row["thread_id"]]
         try:
             tid = row["turn_id"]
             if not isinstance(tid, str) or row["started_at"] is None:

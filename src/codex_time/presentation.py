@@ -11,6 +11,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
+from time import monotonic
 from typing import Literal
 from zoneinfo import ZoneInfo
 
@@ -237,7 +238,7 @@ def _details(row: SessionRow, timezone_name: str) -> list[str]:
 def _browse(
     screen: curses.window, load: SnapshotLoader, timezone_name: str, cwd: str, codex_home: Path
 ) -> None:
-    screen.timeout(60000)
+    screen.timeout(1000)
     try:
         curses.curs_set(0)
     except curses.error:
@@ -252,87 +253,110 @@ def _browse(
     detail_offset = 0
     notice = ""
     previous_id = ""
+    previous_ledger: Ledger | None = None
+    previous_observations: dict[str, Observation] = {}
+    previous_size: tuple[int, int] | None = None
+    rows: list[SessionRow] = []
+    next_display = 0.0
+    redraw = True
     while True:
         try:
             ledger, observations = load()
         except (OSError, ValueError) as error:
             ledger, observations = Ledger(), {}
             notice = f"Cannot read snapshot: {error}; retrying."
-        rows = build_rows(
-            ledger,
-            observations,
-            cwd=cwd,
-            timezone_name=timezone_name,
-            all_directories=all_directories,
-            archive=archive,
-            sort=sort,
-            query=query,
-        )
-        if previous_id:
-            index = next((i for i, row in enumerate(rows) if row.id == previous_id), index)
-        index = max(0, min(index, len(rows) - 1))
-        previous_id = rows[index].id if rows else ""
-        screen.erase()
-        height, _ = screen.getmaxyx()
-        _write(
-            screen,
-            0,
-            f"Codex time | {'All directories' if all_directories else cwd} | "
-            f"{archive} | {sort} | {timezone_name}",
-        )
-        _write(screen, 1, f"Search: {query}{'_' if searching else ''}")
-        body_height = max(0, height - 5)
-        if details and rows:
-            lines = _details(rows[index], timezone_name)
-            detail_offset = max(0, min(detail_offset, max(0, len(lines) - body_height)))
-            for y, line in enumerate(lines[detail_offset : detail_offset + body_height], 2):
-                _write(screen, y, line)
-        else:
-            visible_rows = max(1, body_height // 4)
-            offset = max(0, index - visible_rows + 1)
-            for row_index, row in enumerate(rows[offset : offset + visible_rows]):
-                y = 2 + row_index * 4
-                selected = offset + row_index == index
-                _, width = screen.getmaxyx()
-                title_width = max(1, width - 30)
-                _write(
-                    screen,
-                    y,
-                    f"{row.title[:title_width]} | {row.state} | "
-                    f"{'Archived' if row.archived else 'Active'}",
-                    selected=selected,
-                )
-                _write(
-                    screen,
-                    y + 1,
-                    f"today {duration(row.today)} | total {duration(row.total)} | {row.quality}",
-                    selected=selected,
-                )
-                _write(
-                    screen,
-                    y + 2,
-                    f"Model: {row.model_id or 'Unknown'} / {row.reasoning_level or 'Unknown'}",
-                    selected=selected,
-                )
-                _write(screen, y + 3, row.cwd, selected=selected)
-            if not rows:
-                _write(
-                    screen,
-                    2,
-                    "No matching sessions. Press a for all directories or r for archives.",
-                )
-        _write(screen, height - 3, notice)
-        _write(
-            screen,
-            height - 2,
-            "↑/↓ select  Enter resume  / search  a directories  r archive  s sort",
-        )
-        _write(screen, height - 1, "d details/back  Esc clear/back  q quit (tracking continues)")
-        screen.refresh()
+        now = monotonic()
+        size = screen.getmaxyx()
+        if (
+            redraw
+            or ledger is not previous_ledger
+            or observations != previous_observations
+            or size != previous_size
+            or now >= next_display
+        ):
+            rows = build_rows(
+                ledger,
+                observations,
+                cwd=cwd,
+                timezone_name=timezone_name,
+                all_directories=all_directories,
+                archive=archive,
+                sort=sort,
+                query=query,
+            )
+            if previous_id:
+                index = next((i for i, row in enumerate(rows) if row.id == previous_id), index)
+            index = max(0, min(index, len(rows) - 1))
+            previous_id = rows[index].id if rows else ""
+            screen.erase()
+            height, _ = screen.getmaxyx()
+            _write(
+                screen,
+                0,
+                f"Codex time | {'All directories' if all_directories else cwd} | "
+                f"{archive} | {sort} | {timezone_name}",
+            )
+            _write(screen, 1, f"Search: {query}{'_' if searching else ''}")
+            body_height = max(0, height - 5)
+            if details and rows:
+                lines = _details(rows[index], timezone_name)
+                detail_offset = max(0, min(detail_offset, max(0, len(lines) - body_height)))
+                for y, line in enumerate(lines[detail_offset : detail_offset + body_height], 2):
+                    _write(screen, y, line)
+            else:
+                visible_rows = max(1, body_height // 4)
+                offset = max(0, index - visible_rows + 1)
+                for row_index, row in enumerate(rows[offset : offset + visible_rows]):
+                    y = 2 + row_index * 4
+                    selected = offset + row_index == index
+                    _, width = screen.getmaxyx()
+                    title_width = max(1, width - 30)
+                    _write(
+                        screen,
+                        y,
+                        f"{row.title[:title_width]} | {row.state} | "
+                        f"{'Archived' if row.archived else 'Active'}",
+                        selected=selected,
+                    )
+                    _write(
+                        screen,
+                        y + 1,
+                        f"today {duration(row.today)} | total {duration(row.total)} | "
+                        f"{row.quality}",
+                        selected=selected,
+                    )
+                    _write(
+                        screen,
+                        y + 2,
+                        f"Model: {row.model_id or 'Unknown'} / {row.reasoning_level or 'Unknown'}",
+                        selected=selected,
+                    )
+                    _write(screen, y + 3, row.cwd, selected=selected)
+                if not rows:
+                    _write(
+                        screen,
+                        2,
+                        "No matching sessions. Press a for all directories or r for archives.",
+                    )
+            _write(screen, height - 3, notice)
+            _write(
+                screen,
+                height - 2,
+                "↑/↓ select  Enter resume  / search  a directories  r archive  s sort",
+            )
+            _write(
+                screen, height - 1, "d details/back  Esc clear/back  q quit (tracking continues)"
+            )
+            screen.refresh()
+            previous_ledger, previous_observations = ledger, observations
+            previous_size = size
+            next_display = now + 60
+            redraw = False
         try:
             key = screen.get_wch()
         except curses.error:
             continue
+        redraw = True
         if searching:
             if key in ("\n", "\r", "\x1b"):
                 searching = False
@@ -388,7 +412,7 @@ def _browse(
             finally:
                 curses.reset_prog_mode()
                 screen.refresh()
-                screen.timeout(60000)
+                screen.timeout(1000)
 
 
 def run_ui(load: SnapshotLoader, timezone_name: str, cwd: str, codex_home: Path) -> None:
