@@ -288,7 +288,12 @@ def test_cli_readonly_exports_and_all_date_rejection(tmp_path: Path, monkeypatch
         assert main() == 2
         assert "--date" in capsys.readouterr().err
     assert (root / "ledger.json").read_bytes() == before
-    assert not state.exists()
+    assert {p.relative_to(state) for p in state.rglob("*") if p.is_file()} == {
+        Path("overview-report.json")
+    }
+    cache = json.loads((state / "overview-report.json").read_bytes())
+    assert cache["version"] == 1
+    assert cache["report"]["token_usage"]["usage"]["tokens"]["total_tokens"] == 2100
 
 
 def test_aggregation_keeps_low_order_money_digits_for_large_exact_counters():

@@ -41,3 +41,5 @@ Keep local tracker changes grounded in lifecycle and read-only runtime evidence.
 
 - Content selection alone does not bound ingestion memory: unbounded readline, whole-body Unicode validation and backtracking escape regexes can allocate gigabytes before discarded fields are removed. Stream ignored JSON strings in fixed chunks and preserve complete-record offset semantics; test a body larger than the process memory limit through the public scanner.
 - Sanitized fixtures must exercise real input shapes as well as history counts. A five-root synthetic success did not cover a 2.136 GB rollout record; qualify readiness until actual backfill completes. Use /proc VmHWM for a fresh probe rather than inherited ru_maxrss accounting.
+
+- A materialized Ledger.version does not identify the active storage layout: inspect layout.json and installed package provenance. Test the actual installed API before activation. A whole-report cache cannot solve frequent evidence churn alone; reuse a provably current read-only index and retain full pre-period quota state for reset/conflict parity.

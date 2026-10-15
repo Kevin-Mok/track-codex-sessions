@@ -133,8 +133,16 @@ def main() -> None:
                 str(p.relative_to(root)): hashlib.sha256(p.read_bytes()).hexdigest()
                 for directory in (data, state)
                 for p in directory.rglob("*")
-                if p.is_file()
+                if p.is_file() and p != state / "overview-report.json"
             }
+
+        def check_cache() -> None:
+            cache = state / "overview-report.json"
+            if cache.exists():
+                value = json.loads(cache.read_bytes())
+                assert value["version"] == 1
+                tokens = value["report"]["token_usage"]["usage"]["tokens"]
+                assert tokens["total_tokens"] == 1_320_000
 
         before = hashes()
         if args.scenario == "verify":
@@ -154,9 +162,11 @@ def main() -> None:
             run("overview", "all", "--plain")
             run("projects", "all", "--plain", "--details", width=32)
             assert before == hashes(), "report mutated fixture storage"
+            check_cache()
             run("import-history")
             assert json.loads(run("projects", "all", "--json"))["usage"] == project["usage"]
-            print("Token smoke passed: 1,320,000 tokens; USD 2.91; CAD 3.9285 at 1.35.")
+            prefix = "" if os.environ.get("CLI_PLAIN") == "1" else "✅ "
+            print(prefix + "Token smoke passed: 1,320,000 tokens; USD 2.91; CAD 3.9285 at 1.35.")
             print(
                 "Periods, child attribution, auto-review exclusion, replay "
                 "and read-only reports passed."
@@ -184,6 +194,7 @@ def main() -> None:
         }
         print(run(*options[args.scenario], width=32 if args.scenario == "narrow" else 88), end="")
         assert before == hashes(), "report mutated fixture storage"
+        check_cache()
 
 
 if __name__ == "__main__":

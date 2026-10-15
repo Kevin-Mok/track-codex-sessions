@@ -8,13 +8,17 @@ from test_overview import sample_ledger
 from codex_time.burn import burn_report
 from codex_time.model_usage import model_report
 from codex_time.models import Ledger, Session, Span, Turn
+from codex_time.token_reporting import token_report
 
 
-@pytest.mark.parametrize("reporter", [model_report, burn_report])
+@pytest.mark.parametrize("reporter", [model_report, burn_report, token_report])
 def test_old_sessions_never_reconstruct_work(reporter, monkeypatch: pytest.MonkeyPatch) -> None:
     import codex_time.model_usage as module
 
     data = sample_ledger()
+    if reporter is token_report:
+        import codex_time.token_reporting as module
+
     original = module.segments
     old = data.sessions["root"].model_copy(deep=True)
     old.id = "old"

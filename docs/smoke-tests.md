@@ -80,9 +80,9 @@ Verify automatic work accounting, daily repo/session reports, model working-time
 
 **Expected:** Both outputs omit ANSI color. Explicit --color always enables color when neither NO_COLOR nor --plain is present. Piped automatic output stays readable.
 
-**Action:** codex-time overview week --date 2026-10-06 --json | python3 -c 'import json, sys; data = json.load(sys.stdin); assert set(data) == {"allowance", "model_totals", "reasoning"}; assert data["model_totals"]["total_microseconds"] == data["reasoning"]["total_microseconds"]; print("Overview JSON and totals OK")'
+**Action:** codex-time overview week --date 2026-10-06 --json | python3 -c 'import json, sys; data = json.load(sys.stdin); assert set(data) == {"allowance", "model_totals", "reasoning", "token_usage"}; assert data["model_totals"]["total_microseconds"] == data["reasoning"]["total_microseconds"]; print("Overview JSON and totals OK")'
 
-**Expected:** Clean JSON parses with the three descriptive keys and equal exact model/reasoning totals. Each value retains its existing report schema. Compare allowance with `allowance week --date 2026-10-06 --json`, model_totals with `model-time week --date 2026-10-06 --model-only --json`, and reasoning with the same model-time command without --model-only. The allowance matched-work denominator can be smaller than the model-work total. Overview accepts allowance window/limit/gap controls and leaves stored data unchanged; fixtures verify this with stable storage hashes.
+**Expected:** Clean JSON parses with the four descriptive keys and equal exact model/reasoning totals. Each value retains its existing report schema. Compare allowance with `allowance week --date 2026-10-06 --json`, model_totals with `model-time week --date 2026-10-06 --model-only --json`, and reasoning with the same model-time command without --model-only. The allowance matched-work denominator can be smaller than the model-work total. Overview accepts allowance window/limit/gap controls and leaves stored data unchanged; fixtures verify this with stable durable-storage hashes (overview may create its disposable runtime cache).
 
 **Action:** codex-time --help && uv run pytest -q tests/test_command_layout.py
 
@@ -218,11 +218,11 @@ Run from the source checkout until this version is installed; no sudo is needed.
 
 ## Overview performance and exact accounting parity
 
-Use the source repository root; no sudo is needed. The verifier copies ledger, quota, token and FX inputs into temporary storage, preserves the installed schema/token build, and removes copies on exit. Its output contains sizes/hashes/timings only.
+Use the source repository root; no sudo is needed. The verifier copies the complete legacy or partitioned layout, quota, token and FX inputs into temporary storage, preserves the installed schema/token build, prepares its disposable index there, and removes copies on exit. Its output contains sizes/hashes/timings only.
 
 **Action:** python3 scripts/verify-overview-performance.py
 
-**Expected:** Four first/warm CLI runs per build report seconds, with ongoing elapsed progress. Every optimized JSON field matches full historical computation. The success message explicitly says temporary overlay only; live installation, daemon, rollouts and durable data remain unchanged. Timing is measured, not a guaranteed threshold.
+**Expected:** Four first/repeated CLI runs per build report seconds, with ongoing elapsed progress. Every optimized JSON field matches full historical computation; unchanged optimized runs reuse the report cache. The success message explicitly says temporary overlay only; live installation, daemon, rollouts and durable data remain unchanged. Timing is measured, not a guaranteed threshold.
 
 **Action:** python3 scripts/verify-overview-performance.py --period week --date 2026-10-14 --runs 1
 
@@ -230,7 +230,11 @@ Use the source repository root; no sudo is needed. The verifier copies ledger, q
 
 **Action:** python3 scripts/verify-overview-performance.py --period month --date 2026-11-01 --timezone America/Toronto --runs 1 --plain
 
-**Expected:** Full-report parity across the month containing the DST fallback, including an empty/future period when no work exists. Human progress/success output is ASCII. No cache can conceal changed inputs; each invocation takes new frozen copies.
+**Expected:** Full-report parity across the month containing the DST fallback, including an empty/future period when no work exists. Human progress/success output is ASCII. Each verifier invocation takes new frozen copies. Report cache identities include input/build/options and local-date boundaries; the verifier uses a fixed clock for exact FX metadata parity.
+
+**Action:** Run `codex-time overview`, then `codex-time overview --plain`, then `codex-time overview --json` without changing report options. Repeat after ordinary new work or new quota/token evidence; also select another date or timezone.
+
+**Expected:** All modes retain token costs, allowance and model/reasoning totals. Unchanged inputs reuse private runtime accounting; changed evidence/options produce fresh totals. Long computations keep elapsed progress on stderr, and JSON stdout stays parseable. Live source churn can prevent cache publication and require fresh computation. The existing daemon keeps running; reports never acquire its writer lock or rebuild/migrate its index.
 
 ## Token usage and estimated API costs
 
@@ -238,7 +242,7 @@ Run these from the repository root without sudo after package refresh. `token-sm
 
 **Action:** ./scripts/token-smoke.py --scenario verify
 
-**Expected:** `Token smoke passed: 1,320,000 tokens; USD 2.91; CAD 3.9285 at 1.35.` The next line confirms periods, child attribution, auto-review exclusion, replay and read-only reports. All-time/day/week/month and legacy day exports reconcile, repeated import preserves totals, and report reads leave data/runtime hashes unchanged.
+**Expected:** `✅ Token smoke passed: 1,320,000 tokens; USD 2.91; CAD 3.9285 at 1.35.` (`CLI_PLAIN=1` omits the glyph). The next line confirms periods, child attribution, auto-review exclusion, replay and read-only reports. All-time/day/week/month and legacy day exports reconcile, repeated import preserves totals, and report reads leave durable data, FX and other runtime hashes unchanged; only the validated disposable overview cache may be created or replaced.
 
 **Action:** ./scripts/token-smoke.py --scenario normal
 

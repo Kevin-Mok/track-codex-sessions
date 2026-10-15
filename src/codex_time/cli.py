@@ -17,7 +17,7 @@ from codex_time.day_output import day_table
 from codex_time.fx import read_fx
 from codex_time.model_output import model_csv, model_table
 from codex_time.model_usage import model_report
-from codex_time.overview import overview_report
+from codex_time.overview_cache import cached_overview
 from codex_time.overview_output import overview_table
 from codex_time.presentation import build_rows, duration, run_ui
 from codex_time.progress import report_progress
@@ -296,9 +296,8 @@ def main() -> int:
                     )
         elif command == "overview":
             with report_progress("Reading overview report"):
-                overview_data = overview_report(
-                    store.load(),
-                    fx=read_fx(store.runtime),
+                overview_data = cached_overview(
+                    store,
                     period=args.period,
                     selected_date=args.selected_date,
                     timezone_name=args.timezone,

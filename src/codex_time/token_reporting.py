@@ -1,7 +1,7 @@
 """Read-only token projections; price each observation once before grouping."""
 
 from dataclasses import dataclass, field
-from datetime import date, datetime
+from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal, localcontext
 from pathlib import Path
 from typing import TypedDict
@@ -12,6 +12,7 @@ from codex_time.fx import FXSnapshot
 from codex_time.models import Ledger, UsageObservation
 from codex_time.periods import report_dates
 from codex_time.pricing import PricedUsage, PricingCatalog, load_catalog, price_usage
+from codex_time.work_period import has_work_in_period
 
 EXCLUDED_MODELS = frozenset({"codex-auto-review"})
 
@@ -192,6 +193,8 @@ def token_report(
 ) -> TokenReport:
     first, last = report_dates(ledger, period, selected_date, timezone_name)
     zone = ZoneInfo(timezone_name)
+    start = datetime.combine(first, datetime.min.time(), zone).astimezone(UTC)
+    end = datetime.combine(last + timedelta(days=1), datetime.min.time(), zone).astimezone(UTC)
     fx = fx or FXSnapshot()
     catalog = catalog or load_catalog()
     total = Bucket()
@@ -241,6 +244,8 @@ def token_report(
     # Retain elapsed-work rows whose rollout has no token evidence. Such rows make
     # report coverage incomplete, even if another session has completely priced usage.
     for session in ledger.sessions.values():
+        if not has_work_in_period(session, start, end):
+            continue
         for span in segments(list(session.turns.values())):
             if not included(session.id, span.cwd):
                 continue
