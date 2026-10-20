@@ -266,7 +266,7 @@ def main() -> int:
                     json.dumps({k: data[k] for k in ("days", "directories", "sessions")}, indent=2)
                 )
         elif command == "projects":
-            with report_progress("Reading projects report"):
+            with report_progress(("" if args.plain else "⏳ ") + "Reading projects report"):
                 daily_data = daily_report(
                     store.load(),
                     period=args.period,
@@ -295,7 +295,7 @@ def main() -> int:
                         )
                     )
         elif command == "overview":
-            with report_progress("Reading overview report"):
+            with report_progress(("" if args.plain else "⏳ ") + "Reading overview report"):
                 overview_data = cached_overview(
                     store,
                     period=args.period,

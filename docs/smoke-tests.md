@@ -240,9 +240,9 @@ Use the source repository root; no sudo is needed. The verifier copies the compl
 
 **Expected:** Full-report parity across the month containing the DST fallback, including an empty/future period when no work exists. Human progress/success output is ASCII. Each verifier invocation takes new frozen copies. Report cache identities include input/build/options and local-date boundaries; the verifier uses a fixed clock for exact FX metadata parity.
 
-**Action:** Run `codex-time overview`, then `codex-time overview --plain`, then `codex-time overview --json` without changing report options. Repeat after ordinary new work or new quota/token evidence; also select another date or timezone.
+**Action:** After refreshing the installed package, run `codex-time overview`, then `codex-time overview --plain`, then `codex-time overview --json` from another directory without `uv run` or changing report options. Repeat after ordinary new work or new quota/token evidence; also select another date or timezone.
 
-**Expected:** All modes retain token costs, allowance and model/reasoning totals. Unchanged inputs reuse private runtime accounting; changed evidence/options produce fresh totals. Long computations keep elapsed progress on stderr, and JSON stdout stays parseable. Live source churn can prevent cache publication and require fresh computation. The existing daemon keeps running; reports never acquire its writer lock or rebuild/migrate its index.
+**Expected:** All modes retain token costs, allowance and model/reasoning totals. Unchanged inputs reuse private runtime accounting; changed evidence/options produce fresh totals. Long computations keep elapsed progress on stderr, and JSON stdout stays parseable. Overview and projects loading messages show `⏳ Reading ... report: Ns elapsed` about every two seconds; `--plain` omits the emoji, while `NO_COLOR` retains it. Fast reports finish silently without loading messages. Live source churn can prevent cache publication and require fresh computation. The existing daemon keeps running; reports never acquire its writer lock or rebuild/migrate its index.
 
 ## Token usage and estimated API costs
 
