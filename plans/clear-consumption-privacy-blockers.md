@@ -20,7 +20,7 @@ Postmortem lookup: privacy gate false positives approved public identities neutr
 - [x] Run fixture/recovery/consumption tests, privacy-gate regressions and README checks.
 - [x] Run required refresh-config and record actual result (unrelated MIME drift stops apply).
 - [x] Prepare and review the exact privacy-cleanup candidate; keep the consumption tree separate.
-- [ ] Gate every commit, preserve hooks, commit oldest prerequisite first, then push the verified series once per repository.
+- [x] Gate prerequisite commits and preserve hooks; prepare the final consumption milestone for one verified series push per repository.
 
 ## Verification and delivery
 
@@ -39,3 +39,11 @@ Candidate verification: the first cleanup gate narrowed the baseline failures to
 Source verification: exact cleanup candidate privacy gate PASS, exit 0. Tracker 120 focused tests pass, strict mypy checks 37 files, Ruff passes; canonical privacy gate has 45 passing regressions. Recovery sources remain byte-identical to reviewed hashes, and private-rule precedence is retained. refresh-config exited 1 due pre-existing MIME drift; no force/adoption was attempted and source-gate activation is verified independently. Historical postmortem redactions receive reviewed hash updates with no new engineering finding. Privacy cleanup milestone `chore: sanitize public tracker evidence` is ready for exact staged review; consumption milestone `fix: tolerate quota reset timestamp jitter` follows it. No push until the verified local series is complete.
 
 Prerequisite committed: `cc5f2e3 chore: approve reviewed tracker recovery source` in Linux-config, gated successfully and not yet pushed (one final push after the verified series). Privacy-cleanup milestone `chore: sanitize public tracker evidence` has no remaining candidate blockers; next is the consumption commit and final pushes.
+
+## Verified commit milestones
+
+- `cc5f2e3 chore: approve reviewed tracker recovery source`: four scoped canonical files, gate passed; unrelated knowledge/notes preserved.
+- `6413191 chore: sanitize public tracker evidence`: 31 scoped tracker files, gate passed; consumption logic remained excluded from this prerequisite.
+- `fix: tolerate quota reset timestamp jitter`: final delivery milestone includes the one-line anchored tolerance, signed/boundary regression tests and matching docs/plans. All source work and scoped verification are complete; gate this exact candidate, then push the verified series once per repository and report its resulting hash.
+
+Remaining limits: required refresh stopped on unrelated MIME drift with no adoption; full544 suite remains incomplete. No source-safety or attribution blocker remains. Both initial untracked tracker files and pre-existing Linux-config work stay out. Final verification uses the real installed overview/allowance and exact public candidate gate; no runtime data rewrite or recovery API change occurred.

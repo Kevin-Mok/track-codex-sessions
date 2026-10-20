@@ -43,3 +43,5 @@ Keep local tracker changes grounded in lifecycle and read-only runtime evidence.
 - Sanitized fixtures must exercise real input shapes as well as history counts. A five-root synthetic success did not cover a 2.136 GB rollout record; qualify readiness until actual backfill completes. Use /proc VmHWM for a fresh probe rather than inherited ru_maxrss accounting.
 
 - A materialized Ledger.version does not identify the active storage layout: inspect layout.json and installed package provenance. Test the actual installed API before activation. A whole-report cache cannot solve frequent evidence churn alone; reuse a provably current read-only index and retain full pre-period quota state for reset/conflict parity.
+
+- 2026-10-20: Before explaining short matched consumption time as missing observations, inspect exact reset seconds and retired-reading counts. A five-second anchor split one live deadline drifting eight seconds and retired over 1,000 valid readings. Use the bounded ten-second original-anchor rule, test signed drift and >10-second reset boundaries, and retain genuine gap exclusions.

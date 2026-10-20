@@ -145,7 +145,7 @@ def burn_report(
         grouped: dict[int, list[QuotaObservation]] = defaultdict(list)
         for q in simultaneous:
             canonical = next(
-                (reset for reset in cohorts if abs(reset - q.resets_at) <= 5), q.resets_at
+                (reset for reset in cohorts if abs(reset - q.resets_at) <= 10), q.resets_at
             )
             cohorts.setdefault(canonical, [])
             grouped[canonical].append(q)

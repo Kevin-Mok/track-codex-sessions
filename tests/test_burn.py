@@ -114,6 +114,48 @@ def test_manual_reset_jitter_stale_readings_and_duplicate_snapshots() -> None:
     assert data["latest"]["used_percent"] == 3
 
 
+@pytest.mark.parametrize("jitter", [-10, -8, -6, 6, 8, 10])
+def test_reset_jitter_keeps_continuous_quota_work(jitter: int) -> None:
+    reset = 1791760139
+    data = run_report(
+        ledger_with_work(),
+        [
+            reading(0, 0, reset=reset),
+            reading(100, 1, reset=reset + jitter),
+            reading(200, 2, reset=reset + 3),
+            reading(300, 3, reset=reset + jitter),
+            reading(400, 3, reset=reset + 4),
+        ],
+    )
+    assert len(data["rows"]) == 1
+    row = data["rows"][0]
+    assert row["matched_points"] == 3
+    assert row["working_microseconds"] == 400_000_000
+    assert row["stale_readings"] == 0
+    assert row["excluded_gap_points"] == 0
+    assert data["latest"]["used_percent"] == 3
+    assert datetime.fromisoformat(data["latest"]["at"]) == BASE + timedelta(seconds=400)
+
+
+@pytest.mark.parametrize("jitter", [-11, 11])
+def test_reset_jitter_does_not_chain_past_original_anchor(jitter: int) -> None:
+    reset = 1791760139
+    data = run_report(
+        ledger_with_work(),
+        [
+            reading(0, 10, reset=reset),
+            reading(100, 11, reset=reset + (5 if jitter > 0 else -5)),
+            reading(200, 0, reset=reset + jitter),
+            reading(300, 1, reset=reset + jitter),
+            reading(400, 12, reset=reset),
+        ],
+    )
+    assert len(data["rows"]) == 2
+    assert sum(r["matched_points"] for r in data["rows"]) == 2
+    assert sum(r["working_microseconds"] for r in data["rows"]) == 200_000_000
+    assert data["latest"]["resets_at"] == reset + jitter
+
+
 def test_conflicting_snapshot_breaks_attribution() -> None:
     data = run_report(
         ledger_with_work(), [reading(0, 10), reading(200, 11), reading(200, 12), reading(400, 13)]

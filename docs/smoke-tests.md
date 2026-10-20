@@ -176,11 +176,19 @@ Verify automatic work accounting, daily repo/session reports, model working-time
 
 **Action:** With the service running during normal Codex use, record an export, restart the service, and export the same completed historical period again. If manually resetting allowance as part of ordinary use, inspect the report after subsequent readings arrive.
 
-**Expected:** New readings are collected automatically, completed history is not duplicated by restart, and old evidence survives missing source files. A recorded reset identity change starts a fresh baseline, never a consumption jump. Fixtures verify five-second reset jitter, stale lower readings, duplicate history, v1/v2 ledger preservation/backfill, append-only quota migration, journal restore/fingerprints and incremental checkpoints; this check does not require performing a real reset.
+**Expected:** New readings are collected automatically, completed history is not duplicated by restart, and old evidence survives missing source files. A recorded reset identity change starts a fresh baseline, never a consumption jump. Fixtures verify ten-second reset jitter, stale lower readings, duplicate history, v1/v2 ledger preservation/backfill, append-only quota migration, journal restore/fingerprints and incremental checkpoints; this check does not require performing a real reset.
 
 **Action:** codex-time allowance day
 
 **Expected:** Run after the concurrent-root, child and blocking-wait checks above. The denominator uses counted wait-subtracted root work, with simultaneous roots summed and children adding no separate hours. The numerator remains account-wide: child or external activity can affect it. Excluded changes remain visible and prevent an unsupported account-exhaustion forecast. Native timetrace working-time records and existing `~/.timetrace` are unaffected.
+
+**Action:** codex-time overview day --date 2026-10-20 --details
+
+**Expected:** Quota readings with reset deadlines within ten seconds of the original cohort anchor stay in one row per stream/day. The Oct 20 progression accounts for all three observed points in one row (two matched, one excluded across a genuine 17-minute observation gap), instead of retiring frequent readings or creating a sparse duplicate reset row. Matched work can still differ from total model work when readings are missing. Reset changes beyond ten seconds start a fresh baseline; the tolerance never chains through intermediate readings.
+
+**Action:** Before publishing, run the configured shared privacy gate against the exact index candidate, retaining the external private identity policy and existing hooks.
+
+**Expected:** Neutral public home-path/HTTPS examples pass. The three reviewed recovery CLI/module/test files pass only for their exact path/full-content hashes and sensitive-path category; altered bytes require review. Explicit private prohibitions still reject content even when a public approval exists. This cleanup changes the current tree and does not rewrite already published history.
 
 ## Recorded evidence
 

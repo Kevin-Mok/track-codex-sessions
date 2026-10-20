@@ -19,7 +19,7 @@ fingerprints; migrate embedded v3 without losing evidence. Checkpoint v3 backfil
 incremental. Preserve lifecycle timing, wait subtraction, latest-start turn
 ownership, child exclusion, native projection identity, privacy and read-only
 Codex observation. Manual reset changes start fresh baselines, retired resets
-cannot return, jitter <=5 seconds shares a cohort, stale decreases cannot
+cannot return, jitter <=10 seconds from the original anchor shares a cohort, stale decreases cannot
 inflate remaining quota, simultaneous conflicts break attribution. Calendar
 boundaries and long gaps are not prorated. Missing evidence is unavailable.
 
