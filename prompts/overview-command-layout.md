@@ -4,7 +4,7 @@ Review or extend the combined allowance/model report without changing its accoun
 
 ## Paste-ready Cursor prompt
 
-Work in `/home/kevin/coding/track-codex-sessions` on the existing branch. Read the applicable AGENTS instructions, [the active plan](../plans/overview-command-layout.md), [README](../README.md), [smoke checks](../docs/smoke-tests.md), and the current source/tests before editing. Capture `git status --short`; preserve pre-existing user changes. Do not create a worktree, commit, push or migrate data unless requested.
+Work in `/home/example/coding/track-codex-sessions` on the existing branch. Read the applicable AGENTS instructions, [the active plan](../plans/overview-command-layout.md), [README](../README.md), [smoke checks](../docs/smoke-tests.md), and the current source/tests before editing. Capture `git status --short`; preserve pre-existing user changes. Do not create a worktree, commit, push or migrate data unless requested.
 
 Keep `codex-time overview [day|week|month|all]` defaulting to today. It must show date/timezone and recorded duration, allowance balance, observed consumption, then ranked model totals with reasoning rows beneath each model. Resolve the date once and load the ledger once. Model and reasoning shares use all recorded work; model session counts independently union distinct contributing sessions. Allowance rates retain only their matched-work denominator, with exclusions, a concise confidence warning and separate reset cohorts. Keep unknown attribution visible, waits subtracted, concurrent roots additive and children excluded.
 

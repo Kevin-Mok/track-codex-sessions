@@ -2,7 +2,7 @@
 
 Read the current investigation plan and watcher contract, reproduce the completed cache behavior, and preserve the user's unrelated dirty work. Use the plan's evidence and follow-ups to decide whether any additional change is necessary.
 
-You are working in /home/kevin/coding/track-codex-sessions. Read plans/codex-time-resource-investigation.md, docs/session-status.md, tasks/todo.md and relevant lessons before editing. The merged checkout supports legacy v4 token evidence and the v5 incremental layout. Verify the actual installed build/layout before any activation, and use the stopped-writer migration/rollback guide; do not downgrade production data. The separate dirty incremental-tracking worktree belongs to other work.
+You are working in /home/example/coding/track-codex-sessions. Read plans/codex-time-resource-investigation.md, docs/session-status.md, tasks/todo.md and relevant lessons before editing. The merged checkout supports legacy v4 token evidence and the v5 incremental layout. Verify the actual installed build/layout before any activation, and use the stopped-writer migration/rollback guide; do not downgrade production data. The separate dirty incremental-tracking worktree belongs to other work.
 
 The delivered on-demand `status --json` cache stores compact private session state by rollout path, skips unchanged raw files, appends from byte offsets, handles replacement/corruption and publishes atomically. Timing-only CLI paths skip quota history and reuse an unchanged validated ledger in the picker. Full historical persistence/projection costs remain a separate follow-up.
 

@@ -12,11 +12,11 @@ Provisional steady targets after warm-up: at most 0.5% of one CPU core idle, 2% 
 
 ## Context, boundaries and protected state
 
-- Repository: /home/kevin/coding/track-codex-sessions; implementation: .worktrees/incremental-tracking.
+- Repository: /home/example/coding/track-codex-sessions; implementation: .worktrees/incremental-tracking.
 - The Python 3.12 uv tool installation points to .worktrees/token-cost-reporting. Feature ancestry includes 6da806f; later 0f5a5a6 is documentation-only. Main lacks deployed features and was not used as the installation source.
 - Preserve deployed dirty burn.py/model_usage.py/work_period.py report-period filtering and its six defining tests. Installed-file comparisons grounded their inclusion; the deployed checkout and main remain intact.
 - Git status checkpoints protect pre-existing and other-agent work. No staging, history rewriting, commit, push or production restart is part of the current preparation.
-- Read the [resource assessment](/home/kevin/coding/track-codex-sessions/docs/postmortem/2026-10-14-codex-time-resource-use.md) in the root checkout. The old live PID predates inspected source files, so its approximately 99% CPU / 1.83 GiB RSS observation is separate from the known-build baseline.
+- Read the [resource assessment](/home/example/coding/track-codex-sessions/docs/postmortem/2026-10-14-codex-time-resource-use.md) in the root checkout. The old live PID predates inspected source files, so its approximately 99% CPU / 1.83 GiB RSS observation is separate from the known-build baseline.
 - Relevant code: incremental_storage, changes, reconciliation, bootstrap, cadence, recovery, daemon, ingestion, metadata, projection and report modules. Delivered scripts: benchmark, service-smoke, verify-parity, storage-recovery and deployment.
 - Documentation/checkpoints: [README](../README.md), [smoke checks](../docs/smoke-tests.md), [operating guide](../docs/incremental-tracking.md), [review table](../.harness/incremental-tracking/checks.md) and [progress](../.harness/incremental-tracking/progress.md).
 
@@ -134,7 +134,7 @@ Manual/runtime acceptance:
 - Boundary-preserving same-inode middle rewrite plus growth may await explicit full reconciliation. Historical repair is gradual under notifications; source DB indexes are not modified.
 - Migration preserves original evidence and verified backups. Rollback exports CURRENT evidence before prior installation, verifies it, carries FX into a fresh runtime and keeps partitioned originals. Restoring only the old ledger is insufficient.
 - Bundles contain absolute recovery paths: prepare at their final location. Complex units, changed lineage, mixed projection trees, corruption and symlinks are refused. Interrupted installation retains a stage/backup/export and refuses blind retry. Prior on-disk package bytes are exact; historical PID bytecode and prior dependency lock are not reconstructed.
-- Production approval is required by [long-task-harness SKILL.md step 6](/home/kevin/.agents/skills/long-task-harness/SKILL.md): “Do not publish, push, send, or deploy as part of this procedure; that is a separate action needing its own approval.” Finish the reviewable result first; no live stop/install/restart has occurred.
+- Production approval is required by [long-task-harness SKILL.md step 6](/home/example/.agents/skills/long-task-harness/SKILL.md): “Do not publish, push, send, or deploy as part of this procedure; that is a separate action needing its own approval.” Finish the reviewable result first; no live stop/install/restart has occurred.
 
 If commits are later requested, keep this plan and matching progress/documentation changes with their implementation, preserve unrelated dirty work and use focused Conventional Commit subjects.
 

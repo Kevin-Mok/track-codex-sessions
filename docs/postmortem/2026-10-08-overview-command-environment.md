@@ -4,7 +4,7 @@ The default command sandbox could not start. Approved scoped execution allows im
 
 ## Symptom and impact
 
-Initial pwd, git status, file discovery and skill reads all exited 1 before execution: `bwrap: loopback: Failed RTM_NEWADDR: Operation not permitted`. No project commands ran or data changed. A later combined guidance read exited 1 because this checkout has no `.agent/PLANS.md`; canonical guidance was subsequently located at `/home/kevin/linux-config/.agent/PLANS.md`.
+Initial pwd, git status, file discovery and skill reads all exited 1 before execution: `bwrap: loopback: Failed RTM_NEWADDR: Operation not permitted`. No project commands ran or data changed. A later combined guidance read exited 1 because this checkout has no `.agent/PLANS.md`; canonical guidance was subsequently located at `/home/example/linux-config/.agent/PLANS.md`.
 
 ## Lookup and applicability
 

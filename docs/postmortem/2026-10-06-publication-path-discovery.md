@@ -4,7 +4,7 @@ This incident records failed optional-path lookups during public repository prep
 
 ## Symptom and impact
 
-On October 6, publication preflight attempted to read nonexistent `/home/kevin/dot_codex/AGENTS.md` and `/home/kevin/.agent/PLANS.md`. A later `rg` call named nonexistent `/home/kevin/linux-config/dot_local/bin`. These read-only commands reported missing paths. No application files or recorded tracking data were modified by these failures; instruction discovery required correction before proceeding.
+On October 6, publication preflight attempted to read nonexistent `/home/example/dot_codex/AGENTS.md` and `/home/example/.agent/PLANS.md`. A later `rg` call named nonexistent `/home/example/linux-config/dot_local/bin`. These read-only commands reported missing paths. No application files or recorded tracking data were modified by these failures; instruction discovery required correction before proceeding.
 
 ## Lookup and applicability
 
@@ -12,7 +12,7 @@ The publication task searched canonical postmortem knowledge for optional path d
 
 ## Root cause and resolution
 
-Routing-shim references were resolved against an assumed home-directory layout instead of their canonical repository. Another lookup guessed a helper directory without checking inventory. The task continued with the supplied canonical AGENTS instructions and the confirmed `/home/kevin/linux-config/.agent/PLANS.md`. Helper discovery uses existing directories and guards optional-path reads.
+Routing-shim references were resolved against an assumed home-directory layout instead of their canonical repository. Another lookup guessed a helper directory without checking inventory. The task continued with the supplied canonical AGENTS instructions and the confirmed `/home/example/linux-config/.agent/PLANS.md`. Helper discovery uses existing directories and guards optional-path reads.
 
 ## Verification and status
 

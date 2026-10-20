@@ -4,7 +4,7 @@ Measure the installed overview command, isolate its costs, and verify a small sa
 
 ## Symptom and scope
 
-User reports roughly 22 seconds per `cto` invocation. Live fish mapping confirms `codex-time overview`, executable `/home/kevin/.local/bin/codex-time`. Installed package expects ledger v4 with token reporting; main expects v3. Live activation must preserve v4 and token output. No commit, push, daemon stop, rollout edit or incompatible installation authorized.
+User reports roughly 22 seconds per `cto` invocation. Live fish mapping confirms `codex-time overview`, executable `/home/example/.local/bin/codex-time`. Installed package expects ledger v4 with token reporting; main expects v3. Live activation must preserve v4 and token output. No commit, push, daemon stop, rollout edit or incompatible installation authorized.
 
 ## Workflow failures and lookup
 

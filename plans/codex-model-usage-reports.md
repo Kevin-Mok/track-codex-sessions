@@ -12,7 +12,7 @@ Read README, base plan, smoke tests, lessons, models, accounting, reporting, ing
 
 ## Assumptions and settled decisions
 
-- Active Default mode cannot be switched; maintain this ExecPlan using the existing contract at /home/kevin/linux-config/.agent/PLANS.md.
+- Active Default mode cannot be switched; maintain this ExecPlan using the existing contract at /home/example/linux-config/.agent/PLANS.md.
 - Keep timestamped content-free model evidence on each stable turn. Deduplicate identical timestamped evidence; collapse repeated settings in the attribution timeline while retaining timestamps to detect conflicting copies; resolve equal-timestamp conflicts to Unknown with a content-free diagnostic.
 - First context applies at the turn start; later changed contexts apply at their recorded timestamps. Missing fields remain Unknown. Unmatched context IDs are retained in disposable checkpoints until a matching lifecycle or metadata turn exists; contexts without a resolvable ID are diagnosed.
 - Use existing wait-subtracted segments and latest-starting owner. Model splitting is a report projection and does not change native record identity or timing.
@@ -59,6 +59,6 @@ One installed-ledger snapshot proved model/base report total_seconds and total_m
 
 Preservation audit passed across all pre-upgrade IDs and 42,331 old completed turns: no IDs or wait/coverage evidence lost; completed starts/cwd unchanged. One existing metadata end estimate was precisely reconciled (+0.583s) and one completed turn gained a recorded historical wait. v2 checkpoint holds 4,734 incremental file offsets. Initial raw-equality assertion rejected these lawful corrections; validated evidence containment and marked metadata replacement proved preservation. Native projection invariance has a dedicated sanitized regression, and native readers only ran with disposable HOME/config/store. Human normal-session switches, approval waits and five-minute runs remain documented, not claimed as executed. No deferred code-review findings. Plans, README, smoke checks, reusable setup and handoff prompt reflect the implementation; no commits/pushes requested.
 
-Rollback: stop service before using the content-free pre-upgrade ledger backup at `/home/kevin/.local/state/codex-time/072d8e0b6245b3179be51bde/pre-model-usage-ledger-v1.json` with an older package. Retain current v2 data when reinstalling this package. No sudo needed. Exact automated/manual test instructions and Conventional Commit suggestion are in the saved handoff prompt.
+Rollback: stop service before using the content-free pre-upgrade ledger backup at `/home/example/.local/state/codex-time/072d8e0b6245b3179be51bde/pre-model-usage-ledger-v1.json` with an older package. Retain current v2 data when reinstalling this package. No sudo needed. Exact automated/manual test instructions and Conventional Commit suggestion are in the saved handoff prompt.
 
 Audit incident and reviewed hash/alias registered with explicit no-new-learning decision; targeted check passed. Final user service remains enabled and running, with fresh heartbeat and no live socket diagnostic.

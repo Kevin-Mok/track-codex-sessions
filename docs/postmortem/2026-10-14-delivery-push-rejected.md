@@ -4,7 +4,7 @@ Preserve the verified local commits and record why the requested upstream push d
 
 ## Symptom, impact and evidence
 
-The single planned `git push origin main` exited 1. Git reported `main -> main (non-fast-forward)` and said the local tip was behind its remote counterpart. Destination: `git@github.com:Kevin-Mok/track-codex-sessions.git`. Local commits `48a8137` (daily wording) and `c51d2f1` (cache and overview performance) remain intact. Fresh `git status --short` was empty after the rejected push. No application, installation, service or tracker data was changed by the push.
+The single planned `git push origin main` exited 1. Git reported `main -> main (non-fast-forward)` and said the local tip was behind its remote counterpart. Destination: `https://github.com/Kevin-Mok/track-codex-sessions.git`. Local commits `48a8137` (daily wording) and `c51d2f1` (cache and overview performance) remain intact. Fresh `git status --short` was empty after the rejected push. No application, installation, service or tracker data was changed by the push.
 
 ## Lookup and applicability
 

@@ -10,5 +10,5 @@ A focused commit check named a nonexistent test file. Verify test paths from the
 - Resolution: run the renderer, reporting and CLI suites using their actual paths.
 - Status: resolved; corrected command passed 40 tests in 0.40s.
 - Verification: `uv run pytest -q tests/test_day_output.py tests/test_day_reporting.py tests/test_day_cli.py` exited 0.
-- Learning: no new architectural finding; registration under `/home/kevin/linux-config/dot_agents/skills/postmortem-memory/` remains outside this side conversation's repository mutation scope. The targeted read-only `check --postmortem` exited 1 and reported this new report as unregistered; external hash/alias registration is outstanding.
+- Learning: no new architectural finding; registration under `/home/example/linux-config/dot_agents/skills/postmortem-memory/` remains outside this side conversation's repository mutation scope. The targeted read-only `check --postmortem` exited 1 and reported this new report as unregistered; external hash/alias registration is outstanding.
 - Final verification: the exact staged snapshot passed the same 40 tests in 0.45s; mypy passed all 17 source files, and focused Ruff lint passed.

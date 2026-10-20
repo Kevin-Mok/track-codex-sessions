@@ -47,13 +47,13 @@ The responsible implementation agents and parent reported these final source res
 
 Focused evidence preceded that final run: ingestion 74 tests with owned typing/lint checks; pricing 28 tests with owned typing/lint checks; parent report checks 97; background-FX checks 16; and the corrected legacy day/report coverage checks 62. These focused counts overlap and are not summed. The five review defining failures followed by 43 passing focused checks, and two progress-module RED failures followed by GREEN plus 25 passing compatibility checks, were deliberate test-first evidence rather than unexpected incidents.
 
-A complete v3 data/runtime backup was saved at `/home/kevin/.local/state/codex-time/token-reporting-backups/20261008T200217Z`. Package reinstallation and service startup exited 0, and installed verification found 27 Python/catalog files matching source. **Live backfill completion is not established by this report.** The active token-cost plan owns the continuing installed-service, backfill, runtime, and acceptance checks.
+A complete v3 data/runtime backup was saved at `/home/example/.local/state/codex-time/token-reporting-backups/20261008T200217Z`. Package reinstallation and service startup exited 0, and installed verification found 27 Python/catalog files matching source. **Live backfill completion is not established by this report.** The active token-cost plan owns the continuing installed-service, backfill, runtime, and acceptance checks.
 
 ## Learning review
 
 Decision: **no new reusable learning**. The guessed-path read repeats `local-discover-paths-before-reads`. The conventional fixture naming, typing/lint corrections, representation-aware assertion, and compatibility regression are fully recorded here, but do not justify widening unrelated existing finding remedies. The semantic verifier principle from `ext-xml-boolean-semantics` was applied only by analogy and independently checked with Decimal arithmetic; its XML-specific scope remains unchanged.
 
-Register this report's current SHA-256 and physical alias in the canonical `/home/kevin/linux-config/dot_agents/skills/postmortem-memory/sources.json`, preserving all prior reports/findings. The handoff records the final targeted `check --postmortem` result and required `refresh-config` result. No installed skill copy is edited directly, and source verification is not promoted to live-backfill verification.
+Register this report's current SHA-256 and physical alias in the canonical `/home/example/linux-config/dot_agents/skills/postmortem-memory/sources.json`, preserving all prior reports/findings. The handoff records the final targeted `check --postmortem` result and required `refresh-config` result. No installed skill copy is edited directly, and source verification is not promoted to live-backfill verification.
 
 
 ## Worktree follow-up: verification path typo

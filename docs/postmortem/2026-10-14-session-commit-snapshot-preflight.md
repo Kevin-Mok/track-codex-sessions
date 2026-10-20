@@ -12,7 +12,7 @@ Canonical query: `git diff cached outside repository exported snapshot`. The exp
 
 ## Resolution and verification
 
-Use `/home/kevin/coding/track-codex-sessions/.worktrees/token-cost-reporting` for index checks. The isolated prerequisite source snapshot independently passed306tests; mypy/lint/build are checked separately. Confirm actual-index listing and whitespace checks from the real checkout before staging. Keep all working-tree bytes and any original staging intact.
+Use `/home/example/coding/track-codex-sessions/.worktrees/token-cost-reporting` for index checks. The isolated prerequisite source snapshot independently passed306tests; mypy/lint/build are checked separately. Confirm actual-index listing and whitespace checks from the real checkout before staging. Keep all working-tree bytes and any original staging intact.
 
 ## Snapshot-probe verification
 

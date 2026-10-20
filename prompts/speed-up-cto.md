@@ -1,10 +1,10 @@
 # Reduce cto runtime
 
-Work in /home/kevin/coding/track-codex-sessions. The user reports that `cto` takes about 22 seconds on every run and wants that time reduced. Diagnose the actual command, implement the smallest safe performance improvement, and verify the result against real data.
+Work in /home/example/coding/track-codex-sessions. The user reports that `cto` takes about 22 seconds on every run and wants that time reduced. Diagnose the actual command, implement the smallest safe performance improvement, and verify the result against real data.
 
 ## Known context
 
-- Tracked shortcut mapping `/home/kevin/linux-config/aliases/key_aliases.tmpl:1129` defines `cto "codex-time overview"`. Confirm the live fish mapping and executable path before benchmarking; do not time interactive shell startup as application runtime without distinguishing them.
+- Tracked shortcut mapping `/home/example/linux-config/aliases/key_aliases.tmpl:1129` defines `cto "codex-time overview"`. Confirm the live fish mapping and executable path before benchmarking; do not time interactive shell startup as application runtime without distinguishing them.
 - Prior work added an on-demand session-status cache and timing-only readers. It did not optimize `overview`, which still needs allowance/model data. Do not assume those earlier picker/status improvements fixed this command.
 - Earlier inspection found an installed v4/token-reporting build and live ledger, while the current main checkout accepted ledger v3. Recheck this before selecting implementation and comparison inputs. Never downgrade live data or replace a newer installation with an incompatible checkout. The dirty `.worktrees/incremental-tracking` checkout belongs to separate work; inspect its scope and preserve it rather than overwriting or bundling its changes.
 - The workspace has substantial uncommitted prior work. Capture current Git status and preserve all unrelated files/hunks. Existing performance results are historical evidence, not measurements of this reported 22-second run.

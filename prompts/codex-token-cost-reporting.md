@@ -3,7 +3,7 @@
 Use this prompt to review or continue the implemented token-cost feature. Read the active plan, preserve unrelated work, reproduce the fixtures and installed CLI checks, then address any observed failure before updating evidence.
 
 ```text
-Work in /home/kevin/coding/track-codex-sessions/.worktrees/token-cost-reporting
+Work in /home/example/coding/track-codex-sessions/.worktrees/token-cost-reporting
 on feat/token-cost-reporting (based on HEAD 66d221d). Read applicable AGENTS instructions,
 plans/codex-token-cost-reporting.md, docs/token-cost-reporting.md and current source.
 Capture git status --short before edits. Preserve the original checkout’s pre-existing

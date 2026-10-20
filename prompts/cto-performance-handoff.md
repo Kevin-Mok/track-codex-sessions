@@ -2,7 +2,7 @@
 
 Continue reducing the remaining overview costs while preserving the now-activated v4/token reporting change. Measure first, retain exact output parity, and use the compatible source build.
 
-Work in `/home/kevin/coding/track-codex-sessions`; read `plans/codex-time-resource-investigation.md`, `docs/postmortem/2026-10-14-cto-overview-runtime.md`, and the initial/current dirty state. Preserve unrelated changes and the incremental-tracking worktree. No commit/push or incompatible installation is authorized.
+Work in `/home/example/coding/track-codex-sessions`; read `plans/codex-time-resource-investigation.md`, `docs/postmortem/2026-10-14-cto-overview-runtime.md`, and the initial/current dirty state. Preserve unrelated changes and the incremental-tracking worktree. No commit/push or incompatible installation is authorized.
 
 Main now includes v4 token reporting and the v5 incremental layout after merging origin; verify current installation and stopped-writer migration/rollback requirements before activation. The fix is already installed from `.worktrees/token-cost-reporting`: `work_period.py` plus the conservative session guards in `model_usage.py`/`burn.py`. Preserve these uncommitted changes and verify source/build identity before further work. Keep complete retained-session waits, model contexts, ownership, uncertainty, allowance reset/conflict evidence, and token child/missing-evidence semantics. Avoid persistent caches or changes to live sources.
 

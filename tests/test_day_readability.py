@@ -80,7 +80,7 @@ def busy_day() -> DailyReport:
             )
         directories.append(
             {
-                "cwd": f"/home/kevin/coding/{name}",
+                "cwd": f"/home/example/coding/{name}",
                 "total_seconds": seconds,
                 "total_microseconds": seconds * 1_000_000,
                 "share_percent": share,
@@ -185,7 +185,7 @@ def test_project_summary_has_aligned_time_share_tokens_and_currency_columns() ->
 @pytest.mark.parametrize("width", [120, 160])
 def test_available_terminal_width_keeps_long_project_path_on_one_line(width: int) -> None:
     data = two_sessions()
-    path = "/home/kevin/" + "project-" * ((width - 28) // 8) + "END-PATH"
+    path = "/home/example/" + "project-" * ((width - 28) // 8) + "END-PATH"
     data["directories"][0]["cwd"] = path
     text = day_table(data, width=width, plain=True)
     assert any(path in line for line in text.splitlines()), text
@@ -245,7 +245,7 @@ def test_default_defers_identifiers_but_details_preserve_all_evidence() -> None:
         assert row["id"] not in default
         assert row["id"] in detailed
         assert row["title"] in default and row["title"] in detailed
-    assert "/home/kevin/coding/atlas" in default
+    assert "/home/example/coding/atlas" in default
     for evidence in [
         "input tokens: 1000",
         "cached input tokens: 0",
@@ -271,7 +271,7 @@ def test_default_defers_identifiers_but_details_preserve_all_evidence() -> None:
 def test_narrow_plain_layout_folds_all_metadata_and_keeps_labeled_values() -> None:
     data = two_sessions()
     directory = data["directories"][0]
-    directory["cwd"] = "/home/kevin/" + "very-long-directory/" * 6 + "PATH-END"
+    directory["cwd"] = "/home/example/" + "very-long-directory/" * 6 + "PATH-END"
     directory["sessions"][0]["title"] = "Detailed session title " * 6 + "TITLE-END"
     directory["sessions"][0]["models"][0]["model_id"] = "exact-model-identifier-" * 4 + "MODEL-END"
     output = day_table(data, width=48, plain=True)

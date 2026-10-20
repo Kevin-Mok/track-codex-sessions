@@ -8,7 +8,7 @@ Default read-only command launches failed before execution with `bwrap: loopback
 
 ## Evidence and applicability
 
-Memory query: `bwrap loopback Failed RTM_NEWADDR`; matching `ext-sandbox-loopback` and `local-sandbox-loopback-approved-route` are verified workarounds. Identical wrapper errors on harmless independent reads confirm applicability. Scoped `require_escalated` reads and `git status --short` then exited 0. Read the matching execution-environments reference. The canonical plan contract is `/home/kevin/linux-config/.agent/PLANS.md`; private helper discovery found `context_store.py`, whose topics/brief commands exited 0. Missing-path probes were corrected by file discovery.
+Memory query: `bwrap loopback Failed RTM_NEWADDR`; matching `ext-sandbox-loopback` and `local-sandbox-loopback-approved-route` are verified workarounds. Identical wrapper errors on harmless independent reads confirm applicability. Scoped `require_escalated` reads and `git status --short` then exited 0. Read the matching execution-environments reference. The canonical plan contract is `/home/example/linux-config/.agent/PLANS.md`; private helper discovery found `context_store.py`, whose topics/brief commands exited 0. Missing-path probes were corrected by file discovery.
 
 ## Current status and next steps
 

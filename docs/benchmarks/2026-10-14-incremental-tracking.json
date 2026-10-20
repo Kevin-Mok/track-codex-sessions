@@ -189,7 +189,7 @@
             "wall_seconds": 1.445239301014226
           }
         },
-        "package_path": "/home/kevin/coding/track-codex-sessions/.worktrees/token-cost-reporting/src/codex_time/__init__.py",
+        "package_path": "/home/example/coding/track-codex-sessions/.worktrees/token-cost-reporting/src/codex_time/__init__.py",
         "package_sha256_end": "96d325073f9635be58dcaa9f6540300b8995fb1ce1963c67d678cb44b39d2772",
         "package_sha256_start": "96d325073f9635be58dcaa9f6540300b8995fb1ce1963c67d678cb44b39d2772",
         "parity_counts": {
@@ -293,7 +293,7 @@
             "wall_seconds": 12.711103247012943
           }
         },
-        "package_path": "/home/kevin/coding/track-codex-sessions/.worktrees/token-cost-reporting/src/codex_time/__init__.py",
+        "package_path": "/home/example/coding/track-codex-sessions/.worktrees/token-cost-reporting/src/codex_time/__init__.py",
         "package_sha256_end": "96d325073f9635be58dcaa9f6540300b8995fb1ce1963c67d678cb44b39d2772",
         "package_sha256_start": "96d325073f9635be58dcaa9f6540300b8995fb1ce1963c67d678cb44b39d2772",
         "phase": "steady",
@@ -1914,11 +1914,11 @@
       "Interactive session picker/resume is covered by separate runtime smoke checks."
     ],
     "baseline": {
-      "checkout": "/home/kevin/coding/track-codex-sessions/.worktrees/token-cost-reporting",
+      "checkout": "/home/example/coding/track-codex-sessions/.worktrees/token-cost-reporting",
       "source_sha256": "2ae2366e2887cdab4a178c06c79ff511dd5b161532bc93d7eec301ba913ecb12"
     },
     "optimized": {
-      "checkout": "/home/kevin/coding/track-codex-sessions/.worktrees/incremental-tracking",
+      "checkout": "/home/example/coding/track-codex-sessions/.worktrees/incremental-tracking",
       "source_sha256": "e167205b95db3fa9e738ab0490df07e730c45f3a63edc8b17a35b81e1ddc315b"
     },
     "work_dir": "/tmp/codex-time-final-parity-v5"
@@ -2019,7 +2019,7 @@
       }
     },
     "native_projection_equal": true,
-    "legacy_source": "/home/kevin/coding/track-codex-sessions/.worktrees/token-cost-reporting/src",
+    "legacy_source": "/home/example/coding/track-codex-sessions/.worktrees/token-cost-reporting/src",
     "packaged_executable": "/tmp/codex-time-final-packaged-v5/bin/codex-time",
     "normalized_clock_fields": [
       "check_age_seconds"
@@ -2274,7 +2274,7 @@
   },
   "v6_release": {
     "source_sha256": "5d344eda64c792bc0ac7e18c692e3b08ae0676281ab9af097e35384973594de1",
-    "bundle": "/home/kevin/.local/state/codex-time/deployments/incremental-v6-20261014",
+    "bundle": "/home/example/.local/state/codex-time/deployments/incremental-v6-20261014",
     "status": "prepared and verified; explicit activation approval pending after automatic review rejection",
     "tests": 449
   }

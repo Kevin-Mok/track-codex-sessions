@@ -90,7 +90,7 @@ Direct export validates tracker-native projection schemas and refuses foreign fi
 
 ## Prepared activation and rollback
 
-The corrected immutable v6 bundle is `/home/kevin/.local/state/codex-time/deployments/incremental-v6-20261014`. It contains verified final/prior wheels, the preserved unit and an isolated recovery environment. Its rollback wheel is the exact original pre-v5 installed package, rather than the intermediate OOM-prone v5 build. The original verified pre-upgrade backup remains in the durable `incremental-v5-20261014` sibling bundle. Recovery paths were verified at these durable locations. V5 was activated and failed during real backfill; the service is paused. V6 activation awaits explicit approval after automatic review rejected the ambiguous continuation. Prepare bundles at their final location because recovery environments contain absolute paths.
+The corrected immutable v6 bundle is `/home/example/.local/state/codex-time/deployments/incremental-v6-20261014`. It contains verified final/prior wheels, the preserved unit and an isolated recovery environment. Its rollback wheel is the exact original pre-v5 installed package, rather than the intermediate OOM-prone v5 build. The original verified pre-upgrade backup remains in the durable `incremental-v5-20261014` sibling bundle. Recovery paths were verified at these durable locations. V5 was activated and failed during real backfill; the service is paused. V6 activation awaits explicit approval after automatic review rejected the ambiguous continuation. Prepare bundles at their final location because recovery environments contain absolute paths.
 
 ```bash
 uv run python scripts/deployment.py --plain --json prepare --wheel /absolute/final.whl --destination /absolute/fresh-bundle

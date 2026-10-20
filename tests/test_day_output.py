@@ -24,7 +24,7 @@ def example() -> DailyReport:
         "diagnostics": ["Native read skipped a damaged record."],
         "directories": [
             {
-                "cwd": "/home/kevin/coding/tracker",
+                "cwd": "/home/example/coding/tracker",
                 "total_seconds": 3723.0,
                 "total_microseconds": 3_723_000_000,
                 "share_percent": 99.009,
@@ -80,7 +80,7 @@ def test_day_directory_session_hierarchy_preserves_visible_values() -> None:
         < detail_text.index("notes")
         < detail_text.index("Record notes")
     )
-    assert "/home/kevin/coding/tracker" in text and "/tmp/notes" in text
+    assert "/home/example/coding/tracker" in text and "/tmp/notes" in text
     assert "same-prefix-first-session" not in text
     evidence = day_table(example(), details=True)
     assert "same-prefix-first-session" in evidence and "same-prefix-second-session" in evidence
@@ -174,7 +174,7 @@ def test_compact_directory_summary_precedes_all_session_details(width: int) -> N
     compact = "".join(summary.split())
     assert "tracker" in compact and "notes" in compact
     all_values = "".join(output.split())
-    assert "/home/kevin/coding/tracker" in all_values and "/tmp/notes" in all_values
+    assert "/home/example/coding/tracker" in all_values and "/tmp/notes" in all_values
     assert "99.0%" in compact and "1.0%" in compact
     assert "Share" in summary and "Time" in summary
     assert "1h2m3s" in compact and "37s" in compact
