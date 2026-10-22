@@ -66,7 +66,7 @@ Verify automatic work accounting, daily repo/session reports, model working-time
 
 **Action:** codex-time overview
 
-**Expected:** Today's readable date/timezone and recorded duration appear first, then tokens and estimated Standard API costs, allowance balance, observed consumption and model work. Model totals rank by duration, with reasoning rows directly beneath their model. Model and reasoning percentages share the overall recorded-work denominator. Model session counts independently count distinct contributing sessions; they do not sum reasoning-row counts. All directories and archive states contribute. Unknown model/reasoning remains visible, and unknown models are unranked. Missing readings give an explicit evidence warning while recorded model work remains available.
+**Expected:** Today's readable date/timezone and recorded duration appear first, then tokens and estimated Standard API costs, allowance balance, observed consumption and model work. A bold cyan Total recorded work appears immediately above the model rows, including after multiple allowance reset rows; the combined matched-time summary is bold. Plain mode retains both labels without color. Model totals rank by duration, with reasoning rows directly beneath their model. Model and reasoning percentages share the overall recorded-work denominator. Model session counts independently count distinct contributing sessions; they do not sum reasoning-row counts. All directories and archive states contribute. Unknown model/reasoning remains visible, and unknown models are unranked. Missing readings give an explicit evidence warning while recorded model work remains available.
 
 **Action:** codex-time overview week --date 2026-10-06 --details
 

@@ -52,6 +52,8 @@ The report leads with remaining allowance and a usage bar, followed by the obser
 
 In day/week/month `overview` reports with one allowance stream, **Matched work** compares matched time against all recorded work and **Outside matched windows** explains the rest. The latter includes work before the first reading, after the last reading, between reset baselines, and within excluded windows. For example, 5h26m8s matched plus about six seconds outside matched windows accounts for roughly 5h26m14s of model work. Reset cohorts within that stream share the reconciliation; parallel plan/bucket streams may cover the same work and must not be added together. Missing-reading and all-time reports have no reconciliation. Durations of at least one second omit fractional seconds independently, so displayed model and reasoning rows may add to slightly less than their total. Use exact JSON microseconds for arithmetic.
 
+The model section repeats **Total recorded work** in bold cyan immediately above the model rows, so the complete period total stays visible after reset breakdowns. The combined matched-time summary is bold; `--plain` retains the explicit labels without color.
+
 ```bash
 codex-time allowance day --details
 codex-time allowance day --plain

@@ -198,7 +198,7 @@ def overview_table(
             say(
                 f"Matched work: {_working_duration(matched)} of "
                 f"{_working_duration(models['total_microseconds'])} recorded",
-                "dim",
+                "bold",
             )
             say(
                 "Outside matched windows: "
@@ -210,6 +210,7 @@ def overview_table(
             say("Allowance streams can cover the same work; do not add their hours.", "dim")
             say()
     heading("Model work", "🤖")
+    say(f"Total recorded work: {_working_duration(models['total_microseconds'])}", "bold cyan")
     grouped: dict[str | None, list[ModelUsageRow]] = {}
     for usage in data["reasoning"]["rows"]:
         grouped.setdefault(usage["model_id"], []).append(usage)

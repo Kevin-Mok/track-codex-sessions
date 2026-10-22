@@ -5,6 +5,8 @@ from datetime import UTC, date, datetime, timedelta
 
 import pytest
 from rich.cells import cell_len
+from rich.console import Console
+from rich.text import Text
 
 from codex_time.models import Ledger, ModelContext, QuotaObservation, Session, Span, Turn
 
@@ -297,3 +299,19 @@ def test_fractional_row_durations_explain_visible_addition_difference() -> None:
     assert sum(r["working_microseconds"] // 1_000_000 for r in data["reasoning"]["rows"]) == 1320
     text = render(data, plain=True)
     assert "Fractional seconds are omitted from durations of 1s or more." in text
+
+
+def test_total_work_is_prominent_beside_model_rows_after_reset(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.delenv("NO_COLOR", raising=False)
+    ledger = sample_ledger()
+    ledger.quota_observations = [
+        quota(0, 10), quota(300, 12), quota(400, 1, 1791846539), quota(600, 3, 1791846539)
+    ]
+    output = Text.from_ansi(render(overview(ledger), color=True))
+    label = "Total recorded work: 22m"
+    assert output.plain.index("Model work") < output.plain.index(label)
+    for emphasized in (label, "Matched work: 15m 40s of 22m recorded"):
+        style = output.get_style_at_offset(Console(), output.plain.index(emphasized))
+        assert style.bold and not style.dim

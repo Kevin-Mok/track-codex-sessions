@@ -87,3 +87,25 @@ Memory lookup: `consumption matched hours reset model totals` returned local-quo
 - Initial privacy gate refused one home_path finding in this plan; no commit was created. Replaced absolute machine-home paths with home-relative documentation paths. Memory lookup privacy gate home_path public documentation found local-privacy-reviewed-content-approvals: relevant fail-closed/content-bound approval guidance, but no approval bypass is needed because the documentation can be sanitized. Preserve private rules and rerun the gate on the corrected staged bytes.
 - Corrected exact-candidate privacy check passed (exit 0). Public plan paths are home-relative, private rules/approvals/hooks are untouched, and the final commit command repeats the gate on its final staged candidate.
 - Implementation is complete; remaining delivery step is the scoped Conventional Commit followed by one ordinary push to origin/main. Report the resulting hash and push result in Codex output. No history rewriting or unrelated staging.
+
+### Follow-up: emphasize the full total after resets
+
+- User screenshot confirms the combined roughly 7h20m total is dim and easy to miss after reset rows. Existing top-of-report total is offscreen; add the full recorded total in bold cyan immediately under Model work and make the combined matched-time summary bold.
+- Keep all calculations and quota rows unchanged. Scope: renderer, one actual ANSI-style regression, matching usage/smoke documentation and this living plan/report. Preserve all unrelated baseline dirties.
+- [x] Observe RED for a multi-reset report whose model section lacks a prominent full total.
+- [x] Apply minimal emphasis correction and run focused source checks.
+- [x] Activate only the installed renderer after source checks; record final evidence and remaining full-suite limit.
+
+- Previous milestone 06c35ff was committed and pushed to origin/main. This follow-up is an uncommitted display correction; preserve existing latency work and the prior committed evidence.
+- RED: new multi-reset ANSI regression failed because Total recorded work was missing beside the model rows. GREEN: 55 focused output tests passed, mypy passed 39 modules. Initial Ruff B020 identified a loop variable reusing the headline label; renamed it and reran all focused checks (55 passed, mypy/Ruff clean). No new accounting logic or dependencies.
+- Matching README, allowance guide, existing smoke expectation, review prompt and one lesson updated. Installed module replacement is reversible using /tmp/codex-hours-emphasis-overview-output-before.py. Retain the earlier documented full-suite async teardown limitation.
+- Actual installed color/plain/details commands exited 0. With NO_COLOR explicitly unset for the color probe, ANSI decoding confirmed Matched work is bold and Total recorded work is bold cyan beside the model rows; neither is dim. Initial probe inherited NO_COLOR and correctly had no ANSI, so the diagnostic was corrected without changing app behavior. Plain output was ASCII and at most 32 columns; details retained matched mixes. Installed bytes equal tested source. README gate pass_no_change and Git whitespace check passed.
+- Follow-up remains uncommitted; no new commit/push was requested on this turn. Suggested follow-up subject: fix: emphasize total recorded work after resets. Same three manual CLI checks above apply; use env -u NO_COLOR for an explicit colored diagnostic. Live total at verification was 7h29m44s, naturally later than the screenshot.
+- Exact follow-up automated check: .venv/bin/pytest -q tests/test_overview.py tests/test_model_output.py tests/test_burn_output.py (55 passed), followed by .venv/bin/mypy src (39 modules, clean) and .venv/bin/ruff check src tests (clean), using the isolated HOME/state described above. Canonical reviewed follow-up hash c0279cb6c07d2137fc271f7c79d5e76cb7bd7d649ffc491e2489f62f4cfe7839; targeted memory check exited 0 with no errors.
+
+### Delivery milestone: fix: emphasize total recorded work after resets
+
+- User subsequently requested commit-session for this follow-up. Current main and origin/main both point to 06c35ff; no staged changes existed. Scope helper again reported unsafe/no recognized wrapped writes, so use the recorded baseline and directly observed edits.
+- Include renderer, ANSI regression, allowance guide, living report, plan and review prompt; isolate only the new headline README paragraph, its overview smoke expectation and the period-total lesson. Exclude all pre-existing latency work, newer implicit-date edits from another task, and external canonical knowledge.
+- Fresh checks passed: 55 focused tests, mypy across 39 modules, Ruff, README gate pass_no_change. Prior installed ANSI/plain/details verification remains valid. Preserve the recorded incomplete full-suite limitation.
+- Review the nine-file staged candidate and run the canonical privacy gate with explicit --repo immediately before the scoped Conventional Commit. Next delivery step is one ordinary push to configured origin/main; report the resulting hash and push status without rewriting history.

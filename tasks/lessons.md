@@ -49,3 +49,5 @@ Keep local tracker changes grounded in lifecycle and read-only runtime evidence.
 
 - Reconcile allowance-matched time against all recorded model work within one plan/bucket stream; reset cohorts can be combined, parallel streams can overlap. Quantify outside-window work and distinguish independent whole-second truncation from exact microsecond accounting.
 - A quiet FX test can have passed and be stuck in pytest-asyncio runner teardown. Use bounded faulthandler evidence before attributing the pause to network calls or retrying the full suite.
+
+- Repeat the complete period total prominently beside the model table after allowance reset breakdowns; verify bold/non-dim ANSI styles as well as text and exact accounting.
