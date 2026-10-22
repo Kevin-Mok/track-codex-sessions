@@ -50,6 +50,8 @@ Reports include all root sessions, directories and archive states. There is no d
 
 The report leads with remaining allowance and a usage bar, followed by the observed burn rate and matched working duration. Model IDs and reasoning levels have separate, aligned work-share rows. Dates and reading times use the selected local timezone. Short notes explain low confidence and excluded consumption; a model's share is its share of working time, not an individual quota cost.
 
+In day/week/month `overview` reports with one allowance stream, **Matched work** compares matched time against all recorded work and **Outside matched windows** explains the rest. The latter includes work before the first reading, after the last reading, between reset baselines, and within excluded windows. For example, 5h26m8s matched plus about six seconds outside matched windows accounts for roughly 5h26m14s of model work. Reset cohorts within that stream share the reconciliation; parallel plan/bucket streams may cover the same work and must not be added together. Missing-reading and all-time reports have no reconciliation. Durations of at least one second omit fractional seconds independently, so displayed model and reasoning rows may add to slightly less than their total. Use exact JSON microseconds for arithmetic.
+
 ```bash
 codex-time allowance day --details
 codex-time allowance day --plain

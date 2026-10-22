@@ -192,6 +192,23 @@ def overview_table(
                         f"{item['percentage']:.2f}%"
                     )
             say()
+        streams = {(row["plan_type"], row["bucket"]) for row in allowance["rows"]}
+        if len(streams) == 1:
+            matched = sum(row["working_microseconds"] for row in allowance["rows"])
+            say(
+                f"Matched work: {_working_duration(matched)} of "
+                f"{_working_duration(models['total_microseconds'])} recorded",
+                "dim",
+            )
+            say(
+                "Outside matched windows: "
+                + _working_duration(models["total_microseconds"] - matched),
+                "dim",
+            )
+            say()
+        elif len(streams) > 1:
+            say("Allowance streams can cover the same work; do not add their hours.", "dim")
+            say()
     heading("Model work", "🤖")
     grouped: dict[str | None, list[ModelUsageRow]] = {}
     for usage in data["reasoning"]["rows"]:
@@ -250,6 +267,7 @@ def overview_table(
         say()
     say("Shares use all recorded work; consumption uses matched work.", "dim")
     say("Concurrent root sessions add; child work is included in its root.", "dim")
+    say("Fractional seconds are omitted from durations of 1s or more. Row sums may differ.", "dim")
     if models["quality"] or models["diagnostics"] or models["sampling_uncertainty_seconds"]:
         say("Times are estimates; some work may be incomplete. Use --details.", "yellow")
     if details:

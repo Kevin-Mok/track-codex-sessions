@@ -203,6 +203,7 @@ def test_missing_allowance_keeps_model_work_and_empty_work_is_actionable() -> No
     text = render(overview(ledger))
     assert "No allowance readings" in text and "22m" in text and "high" in text
     assert "0.00 pts" not in text and "remaining" not in text
+    assert "Matched work:" not in text and "Outside matched windows:" not in text
     text = render(overview(Ledger()))
     assert "No recorded work" in text and "codex-time health" in text
 
@@ -253,3 +254,46 @@ def test_positive_subsecond_work_is_visible() -> None:
     ledger.sessions["root"].turns = {"first": turn}
     assert overview(ledger)["model_totals"]["total_microseconds"] == 250_000
     assert "0.25s" in render(overview(ledger))
+
+
+@pytest.mark.parametrize("width,plain", [(88, False), (32, True)])
+def test_consumption_reconciles_matched_and_all_recorded_work(width: int, plain: bool) -> None:
+    data = overview()
+    before = deepcopy(data)
+    # The fixture has 19 matched minutes and 3 minutes after the last reading.
+    text = " ".join(render(data, width=width, plain=plain).split())
+    assert "Matched work: 19m of 22m recorded" in text
+    assert "Outside matched windows: 3m" in text
+    assert data == before
+
+
+def test_reset_cohorts_share_one_work_reconciliation() -> None:
+    ledger = sample_ledger()
+    ledger.quota_observations = [
+        quota(0, 10), quota(300, 12), quota(400, 1, 1791846539), quota(600, 3, 1791846539)
+    ]
+    # 540s in the first cohort + 400s in the second; 380s stay unmatched.
+    text = render(overview(ledger), plain=True)
+    assert "Matched work: 15m 40s of 22m recorded" in text
+    assert "Outside matched windows: 6m 20s" in text
+
+
+def test_parallel_allowance_streams_do_not_share_a_summed_work_reconciliation() -> None:
+    ledger = sample_ledger()
+    ledger.quota_observations += [
+        q.model_copy(update={"bucket": "secondary"}) for q in ledger.quota_observations
+    ]
+    text = render(overview(ledger), plain=True)
+    assert "Matched work:" not in text
+    assert "Allowance streams can cover the same work; do not add their hours." in text
+
+
+def test_fractional_row_durations_explain_visible_addition_difference() -> None:
+    ledger = sample_ledger()
+    ledger.sessions["root"].turns["effort"].end += timedelta(microseconds=600_000)
+    ledger.sessions["other"].turns["second"].end += timedelta(microseconds=600_000)
+    data = overview(ledger)
+    assert data["model_totals"]["total_microseconds"] == 1321_200_000
+    assert sum(r["working_microseconds"] // 1_000_000 for r in data["reasoning"]["rows"]) == 1320
+    text = render(data, plain=True)
+    assert "Fractional seconds are omitted from durations of 1s or more." in text

@@ -46,3 +46,6 @@ Keep local tracker changes grounded in lifecycle and read-only runtime evidence.
 - A materialized Ledger.version does not identify the active storage layout: inspect layout.json and installed package provenance. Test the actual installed API before activation. A whole-report cache cannot solve frequent evidence churn alone; reuse a provably current read-only index and retain full pre-period quota state for reset/conflict parity.
 
 - 2026-10-20: Before explaining short matched consumption time as missing observations, inspect exact reset seconds and retired-reading counts. A five-second anchor split one live deadline drifting eight seconds and retired over 1,000 valid readings. Use the bounded ten-second original-anchor rule, test signed drift and >10-second reset boundaries, and retain genuine gap exclusions.
+
+- Reconcile allowance-matched time against all recorded model work within one plan/bucket stream; reset cohorts can be combined, parallel streams can overlap. Quantify outside-window work and distinguish independent whole-second truncation from exact microsecond accounting.
+- A quiet FX test can have passed and be stuck in pytest-asyncio runner teardown. Use bounded faulthandler evidence before attributing the pause to network calls or retrying the full suite.
