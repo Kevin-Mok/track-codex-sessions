@@ -39,35 +39,50 @@ def usage_line(usage: UsageSummary) -> str:
 
 
 def usage_details(say: Callable[[str, str], None], usage: UsageSummary) -> None:
-    for category, amount in usage["tokens"].items():
-        say(
-            f"{category.replace('_', ' ')}: {amount if amount is not None else 'unavailable'}",
-            "dim",
-        )
-    say(f"Exact USD: {usage['usd']}; CAD: {usage['cad'] or 'unavailable'}", "dim")
-    say(f"Priced tokens: {usage['priced_tokens']}; unpriced: {usage['unpriced_tokens']}", "dim")
+    tokens = usage["tokens"]
     say(
-        f"Uncertain observations: {usage['uncertain_observations']}; "
-        f"sessions without usage: {usage['unavailable_session_count']}",
+        f"Input: {compact_tokens(tokens.get('input_tokens'))} | "
+        f"Cached: {compact_tokens(tokens.get('cached_input_tokens'))} | "
+        f"Output: {compact_tokens(tokens.get('output_tokens'))}",
         "dim",
     )
-    if usage["unavailable_sessions"]:
-        say("Sessions without usage: " + ", ".join(usage["unavailable_sessions"]), "dim")
-    for diagnostic in usage["diagnostics"]:
-        say("Usage: " + diagnostic, "dim")
+    subsets = []
+    for key, label in [
+        ("reasoning_output_tokens", "Reasoning (within output)"),
+        ("cache_write_input_tokens", "Cache writes (within input)"),
+    ]:
+        if tokens.get(key):
+            subsets.append(f"{label}: {compact_tokens(tokens[key])}")
+    if subsets:
+        say(" | ".join(subsets), "dim")
+    gaps = []
+    if usage["unpriced_tokens"]:
+        gaps.append(f"{compact_tokens(usage['unpriced_tokens'])} unpriced tokens")
+    if usage["uncertain_observations"]:
+        gaps.append(f"{usage['uncertain_observations']} uncertain readings")
+    if usage["unavailable_session_count"]:
+        gaps.append(f"{usage['unavailable_session_count']} sessions without usage")
+    if gaps:
+        say("Coverage: " + "; ".join(gaps) + ".", "yellow")
 
 
 def usage_warning(say: Callable[[str, str], None], usage: UsageSummary) -> None:
     if usage["status"] == "unavailable":
         say(
-            "Token usage unavailable. Run import-history after upgrading, then check --details.",
+            "Token usage unavailable. Check codex-time health or run import-history.",
             "yellow",
         )
     elif usage["status"] != "excluded" and not usage["cost_complete"]:
+        reasons = []
+        if usage["unpriced_tokens"]:
+            reasons.append(compact_tokens(usage["unpriced_tokens"]) + " tokens unpriced")
+        if usage["unavailable_session_count"]:
+            count = usage["unavailable_session_count"]
+            reasons.append(f"{count} {'session' if count == 1 else 'sessions'} without usage")
+        if usage["uncertain_observations"]:
+            reasons.append(f"{usage['uncertain_observations']} uncertain readings")
         say(
-            "Known priced subtotal; "
-            + compact_tokens(usage["unpriced_tokens"])
-            + " tokens unpriced. Some evidence may be unavailable; use --details.",
+            "* Known priced subtotal; " + "; ".join(reasons or ["missing billing evidence"]) + ".",
             "yellow",
         )
 
@@ -84,14 +99,13 @@ def provenance(
     if rate is None:
         say("CAD unavailable: no valid cached Bank of Canada rate.", "dim")
     else:
-        say(f"USD to CAD: {rate} | Bank of Canada {observed}", "dim")
         age = fx.get("age_days")
-        if age is not None:
-            say(f"FX observation age: {age} days.", "dim")
+        age_label = f"; {age} {'day' if age == 1 else 'days'} old" if age is not None else ""
+        say(f"FX: 1 USD = {rate} CAD | Bank of Canada {observed}{age_label}", "dim")
         if fx.get("last_error"):
             say("FX refresh failed; using the last valid cached rate.", "yellow")
     say(
-        "Present-rate comparison; excludes tool fees, hosting, taxes and other non-token charges.",
+        "Present-rate API estimate; excludes non-token charges, hosting and taxes.",
         "dim",
     )
     if details:
@@ -100,9 +114,3 @@ def provenance(
             f"Price catalog: {pricing.get('version', 'unknown')}; verified {verified}",
             "dim",
         )
-        # Full structured provenance is also exported; terminal details retain
-        # exact source URLs and rates without relying on guessed model aliases.
-        for key, value in pricing.items():
-            say(f"Pricing {key}: {value}", "dim")
-        for key, value in fx.items():
-            say(f"FX {key}: {value}", "dim")

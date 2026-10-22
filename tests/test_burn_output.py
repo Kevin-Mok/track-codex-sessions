@@ -88,16 +88,29 @@ def test_details_preserve_audit_evidence_and_do_not_mutate_exports() -> None:
     before = copy.deepcopy(data)
     csv_before = burn_csv(data)
     text = burn_table(data, details=True)
-    assert "historical_upper_bound" in text and "1791760139" in text
+    assert "historical_upper_bound" not in text and "1791760139" not in text
+    assert "15" in text and "stale readings" in text
+    assert "Plan / bucket: pro / primary" in text and "Reset:" in text
     assert "1.41" in text and "65.96" in text
     assert data == before and burn_csv(data) == csv_before
+
+
+def test_details_summarize_diagnostics_and_omit_internal_catalog_metadata() -> None:
+    data = example()
+    data["diagnostics"] = [f"private rollout checkpoint {number}" for number in range(50)]
+    text = burn_table(data, details=True)
+    assert "private rollout checkpoint" not in text
+    assert "50" in text and "--json" in text
+    assert "Limit:" not in text and "window:" not in text
+    assert "low confidence" in text and "concurrent working hours add" in text
+    assert len(text.splitlines()) < 40
 
 
 @pytest.mark.parametrize("width", [32, 40, 80, 120])
 def test_terminal_width_wraps_long_unicode_metadata_without_losing_numbers(width: int) -> None:
     data = example()
     data["rows"][0]["mix"][0]["model_id"] = "模型-" + "long-model-" * 9
-    text = burn_table(data, width=width)
+    text = burn_table(data, width=width, details=True)
     for line in text.splitlines():
         cells = sum(
             0
@@ -118,7 +131,7 @@ def test_color_plain_and_untrusted_metadata(monkeypatch: pytest.MonkeyPatch) -> 
     data["rows"][0]["mix"][0]["model_id"] = "[red]A\x1b[2J\nB"
     colored = burn_table(data, color=True)
     assert "\x1b[" in colored and "\x1b[2J" not in colored
-    plain = burn_table(data, plain=True, color=True)
+    plain = burn_table(data, plain=True, color=True, details=True)
     assert plain.isascii() and "\x1b" not in plain and "[red]A" in plain
     assert "60% remaining" in plain and "0.71" in plain
     assert "\x1b" not in burn_table(example(), color=False)

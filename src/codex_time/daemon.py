@@ -5,6 +5,7 @@ import os
 import signal
 import sys
 from collections import deque
+from collections.abc import Callable
 from contextlib import suppress
 from datetime import UTC, datetime
 from pathlib import Path
@@ -60,11 +61,16 @@ def runtime_status(store: Store) -> dict[str, object]:
     }
 
 
-def import_history(store: Store, home: Path) -> Ledger:
+def import_history(
+    store: Store,
+    home: Path,
+    *,
+    progress: Callable[[str], None] | None = None,
+) -> Ledger:
     with store.writer():
         ledger = store.load()
         reader = RolloutReader(
-            home, progress=lambda message: print(message, file=sys.stderr, flush=True)
+            home, progress=progress or (lambda message: print(message, file=sys.stderr, flush=True))
         )
         # Force full idempotent reconciliation.
         reader.scan(ledger)

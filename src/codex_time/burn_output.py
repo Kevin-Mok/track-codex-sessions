@@ -14,6 +14,7 @@ from rich.table import Table
 from rich.text import Text
 
 from codex_time.burn import BurnReport, BurnRow
+from codex_time.output_notes import diagnostic_note, quality_note
 from codex_time.presentation import safe_text
 
 
@@ -212,9 +213,9 @@ def burn_table(
                 say("Conflicting readings were left out.", "yellow")
             if details:
                 say()
-                say("Evidence", "bold")
+                say(icon("🔎") + "Evidence", "bold")
                 say(f"Plan / bucket: {row['plan_type'] or 'Unknown'} / {row['bucket']}")
-                say(f"Reset: {local_stamp(row['resets_at'], zone)} ({row['resets_at']})")
+                say(f"Reset: {local_stamp(row['resets_at'], zone)}")
                 say(
                     f"Matched windows: {row['matched_windows']}; "
                     f"stale readings skipped: {row['stale_readings']}"
@@ -222,18 +223,25 @@ def burn_table(
                 if sensitivity is not None:
                     say(f"Rounding sensitivity: +/-{sensitivity:.2f} pts/h")
                 say(f"Timing uncertainty: {row['sampling_uncertainty_seconds']:.2f}s")
-                say("Flags: " + ", ".join(row["quality"]))
+                extra_quality = [
+                    flag
+                    for flag in row["quality"]
+                    if flag
+                    not in (
+                        "observation_gap",
+                        "historical_upper_bound",
+                        "low_confidence",
+                        "conflicting_quota_observation",
+                    )
+                ]
+                if note := quality_note(extra_quality):
+                    say(icon("⚠️") + note, "yellow")
             say()
         say("pts = allowance percentage points; concurrent working hours add.", "dim")
         say("Model shares describe work, including tools and delegation.", "dim")
     if details:
-        say(
-            f"Limit: {data['limit_id']}; window: {data['window_minutes']} min; "
-            f"maximum observation gap: {data['max_gap_seconds']}s",
-            "dim",
-        )
-        for message in data["diagnostics"]:
-            say("Diagnostic: " + message, "dim")
+        if note := diagnostic_note(data["diagnostics"]):
+            say(icon("⚠️") + note, "yellow")
     else:
         say("More evidence: --details", "dim")
     return "\n".join(line.rstrip() for line in output.getvalue().splitlines())

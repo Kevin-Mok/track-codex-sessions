@@ -6,7 +6,7 @@ import json
 import os
 import shutil
 import sys
-from datetime import date, datetime
+from datetime import date
 from pathlib import Path
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
@@ -19,9 +19,17 @@ from codex_time.model_output import model_csv, model_table
 from codex_time.model_usage import model_report
 from codex_time.overview_cache import cached_overview
 from codex_time.overview_output import overview_table
-from codex_time.presentation import build_rows, duration, run_ui
+from codex_time.presentation import build_rows, run_ui
 from codex_time.progress import report_progress
 from codex_time.reporting import daily_report, report
+from codex_time.session_output import (
+    health_text,
+    history_text,
+    import_summary,
+    progress_text,
+    sessions_text,
+    status_text,
+)
 from codex_time.storage import Store, StoreError
 
 ALIASES = {
@@ -56,9 +64,13 @@ def parser() -> argparse.ArgumentParser:
         default=60,
         help="live sampling interval, greater than zero and at most 60 (default: 60)",
     )
-    sub.add_parser("import-history", help="idempotently reconcile historical lifecycle turns")
+    importer = sub.add_parser(
+        "import-history", help="idempotently reconcile historical lifecycle turns"
+    )
+    importer.add_argument("--plain", action="store_true", help="ASCII output without emoji")
     status = sub.add_parser("health", help="show observer health and accuracy diagnostics")
     status.add_argument("--json", action="store_true")
+    status.add_argument("--details", action="store_true", help="show storage and runtime paths")
     status.add_argument(
         "--plain", action="store_true", help="ASCII status without decorative glyphs"
     )
@@ -66,6 +78,7 @@ def parser() -> argparse.ArgumentParser:
     state = sub.add_parser("status", help="read cached session state for external watchers")
     state.add_argument("--json", action="store_true", help="versioned machine-readable state")
     state.add_argument("--plain", action="store_true", help="ASCII output without emoji")
+    state.add_argument("--details", action="store_true", help="show full session IDs and paths")
     sub.add_parser("resume", help="open the searchable session picker")
     for name in ("sessions", "history"):
         command = sub.add_parser(
@@ -79,6 +92,10 @@ def parser() -> argparse.ArgumentParser:
         command.add_argument("--archive", choices=["active", "archived", "all"], default="active")
         command.add_argument("--cwd", default=os.getcwd())
         command.add_argument("--json", action="store_true")
+        command.add_argument("--plain", action="store_true", help="ASCII output without emoji")
+        command.add_argument(
+            "--details", action="store_true", help="show full session IDs and directory paths"
+        )
         if name == "sessions":
             command.add_argument("--search", default="")
             command.add_argument(
@@ -178,38 +195,60 @@ def main() -> int:
         if command == "daemon":
             asyncio.run(run_daemon(store, home, args.socket, sample_seconds=args.sample_seconds))
         elif command == "import-history":
-            ledger = import_history(store, home)
-            print(f"Imported {len(ledger.sessions)} sessions; no duplicate intervals.")
-            for message in ledger.diagnostics:
-                print(message, file=sys.stderr)
+            plain = args.plain or os.environ.get("CLI_PLAIN") == "1"
+
+            def import_progress(message: str) -> None:
+                print(
+                    progress_text(
+                        message,
+                        width=shutil.get_terminal_size((88, 24)).columns,
+                        plain=plain,
+                    ),
+                    file=sys.stderr,
+                    flush=True,
+                )
+
+            with report_progress(
+                ("" if plain else "⏳ ") + "Importing history",
+                interactive=False,
+            ):
+                ledger = import_history(store, home, progress=import_progress)
+            summary, notices = import_summary(
+                len(ledger.sessions),
+                ledger.diagnostics,
+                width=shutil.get_terminal_size((88, 24)).columns,
+                plain=plain,
+            )
+            print(summary)
+            if notices:
+                print(notices, file=sys.stderr)
         elif command == "status":
             from codex_time.session_status import session_status
 
             def progress(message: str) -> None:
-                prefix = "" if args.plain else "⏳ "
-                print(prefix + message, file=sys.stderr, flush=True)
+                print(
+                    progress_text(
+                        message,
+                        width=shutil.get_terminal_size((88, 24)).columns,
+                        plain=args.plain or os.environ.get("CLI_PLAIN") == "1",
+                    ),
+                    file=sys.stderr,
+                    flush=True,
+                )
 
             state_data = runtime_status(store)
             state_data.update(session_status(home, store.runtime, progress))
             if args.json:
                 print(json.dumps(state_data, ensure_ascii=False))
             else:
-                entries = state_data["sessions"]
-                assert isinstance(entries, list)
-                prefix = "" if args.plain else "📋 "
-                freshness = "Fresh" if state_data["fresh"] else "Incomplete; retry status"
-                print(f"{prefix}{freshness} session state: {len(entries)} sessions")
-                print(f"Cache: {state_data['cache_path']}")
-                # Human output is bounded; JSON supplies every session and full messages.
-                for entry in sorted(
-                    entries, key=lambda item: str(item.get("last_updated") or ""), reverse=True
-                )[:20]:
-                    from codex_time.presentation import safe_text
-
-                    print(safe_text(
-                        f"{entry['session_id']}  {entry['status']:8}  "
-                        f"{entry['tty'] or '-'}  {entry['cwd']}"
-                    ))
+                print(
+                    status_text(
+                        state_data,
+                        width=shutil.get_terminal_size((88, 24)).columns,
+                        details=args.details,
+                        plain=args.plain or os.environ.get("CLI_PLAIN") == "1",
+                    )
+                )
             if not state_data["fresh"]:
                 return 2
         elif command == "health":
@@ -218,37 +257,21 @@ def main() -> int:
             if args.json:
                 print(json.dumps(status, indent=2))
             else:
-                plain = args.plain or os.environ.get("CLI_PLAIN") == "1"
-                print(("" if plain else "🩺 ") + "Codex Time health")
-                labels = {
-                    "daemon": "Daemon",
-                    "heartbeat": "Last heartbeat",
-                    "pid": "Process ID",
-                    "live_diagnostic": "Live diagnostic",
-                    "data_dir": "Data directory",
-                    "state_dir": "Runtime directory",
-                    "sessions": "Recorded sessions",
-                    "sampling_interval_seconds": "Sampling seconds",
-                    "notification_mode": "File notifications",
-                    "diagnostics": "Diagnostics",
-                }
-                for key, value in status.items():
-                    if key == "heartbeat" and isinstance(value, str):
-                        try:
-                            value = (
-                                datetime.fromisoformat(value)
-                                .astimezone(ZoneInfo(args.timezone))
-                                .strftime("%a, %b %-d, %-I:%M:%S %p %Z")
-                            )
-                        except ValueError:
-                            pass
-                    display = value if value is not None else "Not available"
-                    print(f"{labels.get(key, key):<19} : {display}")
+                print(
+                    health_text(
+                        status,
+                        timezone=args.timezone,
+                        width=shutil.get_terminal_size((88, 24)).columns,
+                        details=args.details,
+                        plain=args.plain or os.environ.get("CLI_PLAIN") == "1",
+                    )
+                )
         elif command == "history":
             if args.start and args.end and args.end < args.start:
                 raise StoreError("report --to must be on or after --from")
+            ledger = store.load_timing()
             data = report(
-                store.load_timing(),
+                ledger,
                 cwd=args.cwd,
                 all_directories=args.all_dirs,
                 archive=args.archive,
@@ -260,13 +283,20 @@ def main() -> int:
             if args.json:
                 print(json.dumps(data, indent=2))
             else:
-                print(f"Working time ({args.timezone}): {duration(data['total_seconds'])}")
-                print(f"Quality: {', '.join(str(q) for q in data['quality'])}")
                 print(
-                    json.dumps({k: data[k] for k in ("days", "directories", "sessions")}, indent=2)
+                    history_text(
+                        data,
+                        ledger,
+                        width=shutil.get_terminal_size((88, 24)).columns,
+                        details=args.details,
+                        plain=args.plain or os.environ.get("CLI_PLAIN") == "1",
+                    )
                 )
         elif command == "projects":
-            with report_progress(("" if args.plain else "⏳ ") + "Reading projects report"):
+            with report_progress(
+                ("" if args.plain else "⏳ ") + "Reading projects report",
+                interactive=not args.json and sys.stdout.isatty(),
+            ):
                 daily_data = daily_report(
                     store.load(),
                     period=args.period,
@@ -277,25 +307,28 @@ def main() -> int:
                     session_id=args.session,
                     timezone_name=args.timezone,
                 )
-                if args.json:
-                    print(json.dumps(daily_data, indent=2))
-                else:
-                    use_color = args.color == "always" or (
-                        args.color == "auto"
-                        and sys.stdout.isatty()
-                        and os.environ.get("TERM") != "dumb"
+            if args.json:
+                print(json.dumps(daily_data, indent=2))
+            else:
+                use_color = args.color == "always" or (
+                    args.color == "auto"
+                    and sys.stdout.isatty()
+                    and os.environ.get("TERM") != "dumb"
+                )
+                print(
+                    day_table(
+                        daily_data,
+                        width=shutil.get_terminal_size((88, 24)).columns,
+                        color=use_color,
+                        details=args.details,
+                        plain=args.plain,
                     )
-                    print(
-                        day_table(
-                            daily_data,
-                            width=shutil.get_terminal_size((88, 24)).columns,
-                            color=use_color,
-                            details=args.details,
-                            plain=args.plain,
-                        )
-                    )
+                )
         elif command == "overview":
-            with report_progress(("" if args.plain else "⏳ ") + "Reading overview report"):
+            with report_progress(
+                ("" if args.plain else "⏳ ") + "Reading overview report",
+                interactive=not args.json and sys.stdout.isatty(),
+            ):
                 overview_data = cached_overview(
                     store,
                     period=args.period,
@@ -305,23 +338,23 @@ def main() -> int:
                     limit_id=args.limit_id,
                     max_gap_seconds=args.max_gap_seconds,
                 )
-                if args.json:
-                    print(json.dumps(overview_data, indent=2))
-                else:
-                    use_color = args.color == "always" or (
-                        args.color == "auto"
-                        and sys.stdout.isatty()
-                        and os.environ.get("TERM") != "dumb"
+            if args.json:
+                print(json.dumps(overview_data, indent=2))
+            else:
+                use_color = args.color == "always" or (
+                    args.color == "auto"
+                    and sys.stdout.isatty()
+                    and os.environ.get("TERM") != "dumb"
+                )
+                print(
+                    overview_table(
+                        overview_data,
+                        width=shutil.get_terminal_size((88, 24)).columns,
+                        color=use_color,
+                        details=args.details,
+                        plain=args.plain,
                     )
-                    print(
-                        overview_table(
-                            overview_data,
-                            width=shutil.get_terminal_size((88, 24)).columns,
-                            color=use_color,
-                            details=args.details,
-                            plain=args.plain,
-                        )
-                    )
+                )
         elif command == "allowance":
             burn_data = burn_report(
                 store.load(),
@@ -411,13 +444,14 @@ def main() -> int:
                     )
                 )
             else:
-                for row in rows:
-                    print(
-                        f"{row.id}  {row.state:7}  {'archived' if row.archived else 'active':8}  "
-                        f"today {duration(row.today)}  total {duration(row.total)}  "
-                        f"model {row.model_id or 'Unknown'} / {row.reasoning_level or 'Unknown'}  "
-                        f"{row.title}  {row.cwd}  [{row.quality}]"
+                print(
+                    sessions_text(
+                        rows,
+                        width=shutil.get_terminal_size((88, 24)).columns,
+                        details=args.details,
+                        plain=args.plain or os.environ.get("CLI_PLAIN") == "1",
                     )
+                )
         else:
             run_ui(
                 lambda: (store.picker_snapshot(), observations(store)),

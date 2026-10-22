@@ -12,6 +12,7 @@ from rich.table import Table
 from rich.text import Text
 
 from codex_time.model_usage import ModelUsageReport, ModelUsageRow
+from codex_time.output_notes import diagnostic_note, quality_note
 from codex_time.presentation import safe_text
 
 
@@ -140,26 +141,29 @@ def model_table(
         say()
     say("Share = working time, including tools; simultaneous sessions count separately.", "dim")
     if data["quality"] or data["diagnostics"] or data["sampling_uncertainty_seconds"]:
-        say(
-            icon("⚠️") + "Times are estimates; some work may be incomplete. Use --details.", "yellow"
-        )
+        warning = "Times are estimates; some work may be incomplete."
+        if details:
+            warning = quality_note(data["quality"]) or warning
+        else:
+            warning += " Use --details."
+        say(icon("⚠️") + warning, "yellow")
     if details:
         say()
         say(icon("🔎") + "Timing details", "bold")
-        say(f"Total: {data['total_seconds']:g} seconds")
         say(
             f"Sampling uncertainty: {data['sampling_uncertainty_seconds']:g}s "
             "(not additive across rows)"
         )
         for row in data["rows"]:
             effort = "" if data["model_only"] else f" / {row['reasoning_level'] or 'Unknown'}"
+            note = quality_note([flag for flag in row["quality"] if flag not in data["quality"]])
             say(
                 f"{row['model_id'] or 'Unknown'}{effort}: "
-                f"{', '.join(row['quality']) or 'observed'}; "
                 f"{row['sampling_uncertainty_seconds']:g}s uncertainty"
+                + (f"; {note}" if note else "")
             )
-        for message in data["diagnostics"]:
-            say(f"Diagnostic: {message}")
+        if note := diagnostic_note(data["diagnostics"]):
+            say(icon("⚠️") + note, "yellow")
     return output.getvalue().rstrip()
 
 

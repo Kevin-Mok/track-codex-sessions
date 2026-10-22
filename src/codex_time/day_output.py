@@ -12,9 +12,17 @@ from rich.padding import Padding
 from rich.table import Table
 from rich.text import Text
 
+from codex_time.output_notes import diagnostic_note, quality_note
 from codex_time.presentation import safe_text
 from codex_time.reporting import DailyReport
-from codex_time.token_output import compact_tokens, money, provenance, usage_details, usage_line
+from codex_time.token_output import (
+    compact_tokens,
+    money,
+    provenance,
+    usage_details,
+    usage_line,
+    usage_warning,
+)
 from codex_time.token_reporting import UsageSummary
 
 
@@ -102,15 +110,13 @@ def day_table(
         return Text(value, style=style, overflow="fold")
 
     def say(value: str = "", style: str = "", *, indent: int = 0) -> None:
+        if style == "yellow" and not plain and not value.startswith("⚠"):
+            value = "⚠️ " + value
         rendered = text(value, style)
         console.print(Padding(rendered, (0, 0, 0, indent)) if indent else rendered)
 
     def icon(value: str) -> str:
         return "" if plain else value + " "
-
-    def flags(quality: list[str], *, indent: int = 0) -> None:
-        if details and quality:
-            say("Flags: " + ", ".join(quality), "dim", indent=indent)
 
     def rows(headers: list[str], values: list[list[str]], styles: list[str]) -> None:
         """Use columns when each value and a readable label fit; otherwise stack."""
@@ -152,12 +158,13 @@ def day_table(
         {session["id"] for directory in data["directories"] for session in directory["sessions"]}
     )
     total = "Day total" if period == "day" else "Period total"
+    directory_count = len(data["directories"])
     say(
         f"{total}: {_working_duration(data['total_microseconds'])} | "
-        f"{len(data['directories'])} directories | {session_count} sessions",
+        f"{directory_count} {'directory' if directory_count == 1 else 'directories'} | "
+        f"{session_count} {'session' if session_count == 1 else 'sessions'}",
         "bold green",
     )
-    flags(data["quality"])
     if "usage" in data:
         say(
             icon("💰") + "Estimated API token cost " + ("-" if plain else "—") + " Standard", "bold"
@@ -177,33 +184,9 @@ def day_table(
                 "yellow",
             )
         elif usage["status"] != "excluded" and not usage["cost_complete"]:
-            say(
-                icon("⚠️")
-                + "* Known priced subtotal; "
-                + compact_tokens(usage["unpriced_tokens"])
-                + " tokens unpriced; missing evidence may affect costs.",
-                "yellow",
-            )
+            usage_warning(say, usage)
         if data.get("excluded_models"):
             say("Excluded from token/cost totals: " + ", ".join(data["excluded_models"]), "dim")
-        fx = data.get("fx", {})
-        if details:
-            provenance(say, data.get("pricing", {}), fx)
-            usage_details(say, usage)
-        elif fx.get("rate") is None:
-            say("CAD unavailable: no valid cached Bank of Canada rate.", "dim")
-        else:
-            age = fx.get("age_days")
-            age_label = f"; {age} {'day' if age == 1 else 'days'} old" if age is not None else ""
-            say(
-                f"FX: 1 USD = {fx['rate']} CAD | "
-                f"Bank of Canada {fx.get('observation_date')}{age_label}",
-                "dim",
-            )
-            if fx.get("last_error"):
-                say(icon("⚠️") + "FX refresh failed; using the last valid cached rate.", "yellow")
-        if not details:
-            say("Present-rate estimate; excludes non-token charges, hosting and taxes.", "dim")
     say()
 
     if not data["directories"]:
@@ -240,10 +223,8 @@ def day_table(
         rows(headers, summary, ["bold"] * len(summary))
         say()
         say(icon("💬") + "Session details", "bold")
-        for directory, name in zip(data["directories"], names, strict=True):
-            say(icon("📁") + name, "bold cyan")
-            say(directory["cwd"] or "Unknown directory", "dim")
-            flags(directory["quality"], indent=2)
+        for directory in data["directories"]:
+            say(icon("📁") + (directory["cwd"] or "Unknown directory"), "bold cyan")
             sessions = directory["sessions"]
             session_usage = any("usage" in session or session.get("models") for session in sessions)
             session_headers = ["Session / model", "Time"] + (
@@ -273,38 +254,47 @@ def day_table(
                             row.extend(_usage_cells(model["usage"]))
                         values.append(row)
                         styles.append("dim")
-            if values:
-                rows(session_headers, values, styles)
-            if details:
-                for session in sessions:
-                    say(session["title"].strip() or "Untitled session", "bold", indent=2)
+                if details:
+                    rows(session_headers, values, styles)
+                    values.clear()
+                    styles.clear()
                     say("ID: " + session["id"], "dim", indent=2)
-                    flags(session["quality"], indent=2)
                     if "usage" in session:
                         usage_details(
                             lambda value, style: say(value, style, indent=2), session["usage"]
                         )
-                    for model in session.get("models", []):
-                        say(model["model_id"] or "Unknown model", "bold", indent=2)
-                        usage_details(
-                            lambda value, style: say(value, style, indent=4), model["usage"]
-                        )
                     if session.get("children"):
-                        say("Child contributions", "bold", indent=2)
-                        for child in session["children"]:
-                            say(
-                                f"{child['session_id']} / {child['model_id'] or 'Unknown model'}",
-                                indent=4,
+                        children = session["children"]
+                        unavailable_children = sum(
+                            child["usage"]["status"] == "unavailable" for child in children
+                        )
+                        say(
+                            f"Child contributions: {len(children)} agents"
+                            + (
+                                f"; {unavailable_children} without usage"
+                                if unavailable_children
+                                else ""
                             )
-                            say(usage_line(child["usage"]), indent=4)
+                            + "; known usage included above.",
+                            "dim",
+                            indent=2,
+                        )
+            if values:
+                rows(session_headers, values, styles)
             say()
-        say("Some work may be estimated; concurrent sessions add.", "dim")
+        note = quality_note(data["quality"])
+        if note:
+            say(note, "yellow")
+        say("Concurrent sessions add; child-agent time is included in its root.", "dim")
 
-    if details:
-        if "pricing" in data:
-            provenance(say, data["pricing"], data.get("fx", {}), details=True)
-        for message in data["diagnostics"]:
-            say("Diagnostic: " + message, "dim")
-    else:
-        say("Full IDs, token categories and evidence: --details | Exact values: --json", "dim")
+    if "usage" in data:
+        provenance(say, data.get("pricing", {}), data.get("fx", {}), details=details)
+    if details and (note := diagnostic_note(data["diagnostics"])):
+        say(note, "dim")
+    say(
+        "Exact values and full evidence: --json"
+        if details
+        else "IDs and token breakdown: --details | Full evidence: --json",
+        "dim",
+    )
     return "\n".join(line.rstrip() for line in output.getvalue().splitlines())

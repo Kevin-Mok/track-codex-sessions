@@ -13,6 +13,7 @@ from rich.text import Text
 from codex_time.burn_output import local_stamp
 from codex_time.model_output import _working_duration
 from codex_time.model_usage import ModelUsageRow
+from codex_time.output_notes import diagnostic_note, quality_note
 from codex_time.overview import OverviewReport
 from codex_time.presentation import safe_text
 from codex_time.token_output import provenance, usage_details, usage_line, usage_warning
@@ -49,6 +50,8 @@ def overview_table(
         return Text(value, style=style, overflow="fold")
 
     def say(value: str = "", style: str = "") -> None:
+        if style == "yellow" and not plain and not value.startswith("⚠"):
+            value = "⚠️ " + value
         console.print(text(value, style))
 
     def heading(label: str, icon: str) -> None:
@@ -85,25 +88,26 @@ def overview_table(
     heading("Estimated API token cost " + ("-" if plain else "—") + " Standard", "💵")
     say(usage_line(tokens["usage"]), "bold")
     usage_warning(say, tokens["usage"])
+    if details:
+        usage_details(say, tokens["usage"])
     if tokens["excluded_models"]:
         say("Excluded from token/cost totals: " + ", ".join(tokens["excluded_models"]), "dim")
     for token_model in tokens["models"]:
         say(token_model["model_id"] or "Unknown model", "bold")
         say("  " + usage_line(token_model["usage"]))
-        if details:
-            usage_details(say, token_model["usage"])
     provenance(say, tokens["pricing"], tokens["fx"], details=details)
     if details:
-        usage_details(say, tokens["usage"])
-        for directory in tokens["directories"]:
-            for session in directory["sessions"]:
-                for child in session["children"]:
-                    say(
-                        f"Child contribution: {child['session_id']} -> {session['id']} "
-                        f"in {directory['cwd'] or 'Unknown directory'} / "
-                        f"{child['model_id'] or 'Unknown'}"
-                    )
-                    say(usage_line(child["usage"]))
+        children = {
+            child["session_id"]
+            for directory in tokens["directories"]
+            for session in directory["sessions"]
+            for child in session["children"]
+        }
+        if children:
+            say(
+                f"Child-agent contributions: {len(children)} agents included in token totals.",
+                "dim",
+            )
     say()
     heading("Latest allowance snapshot" if models["period"] == "all" else "Allowance", "🔋")
     say(
@@ -170,7 +174,6 @@ def overview_table(
             if details:
                 say("Allowance evidence", "bold")
                 say(f"Plan / bucket: {row['plan_type'] or 'Unknown'} / {row['bucket']}")
-                say(f"Reset timestamp: {row['resets_at']}")
                 say(
                     f"Matched windows: {row['matched_windows']}; "
                     f"stale readings skipped: {row['stale_readings']}"
@@ -178,7 +181,8 @@ def overview_table(
                 if sensitivity is not None:
                     say(f"Rounding sensitivity: +/-{sensitivity:.2f} pts/h")
                 say(f"Sampling uncertainty: {row['sampling_uncertainty_seconds']:g}s")
-                say("Flags: " + ", ".join(row["quality"]))
+                if note := quality_note(row["quality"]):
+                    say(note, "dim")
                 say("Matched model mix", "bold")
                 for item in row["mix"]:
                     say(
@@ -251,23 +255,21 @@ def overview_table(
     if details:
         say()
         heading("Timing details", "🔎")
-        say(f"Total: {models['total_seconds']:g} seconds")
         say(
             f"Sampling uncertainty: {models['sampling_uncertainty_seconds']:g}s "
             "(not additive across rows)"
         )
         for usage in data["reasoning"]["rows"]:
-            say(
-                f"{usage['model_id'] or 'Unknown'} / {usage['reasoning_level'] or 'Unknown'}: "
-                f"{', '.join(usage['quality']) or 'observed'}; "
-                f"{usage['sampling_uncertainty_seconds']:g}s uncertainty"
-            )
-        say(
-            f"Limit: {allowance['limit_id']}; window: {allowance['window_minutes']} min; "
-            f"maximum observation gap: {allowance['max_gap_seconds']}s"
-        )
-        for message in models["diagnostics"]:
-            say("Diagnostic: " + message)
+            if usage["sampling_uncertainty_seconds"]:
+                say(
+                    f"{usage['model_id'] or 'Unknown'} / {usage['reasoning_level'] or 'Unknown'}: "
+                    f"{usage['sampling_uncertainty_seconds']:g}s uncertainty"
+                )
+        if note := quality_note(models["quality"]):
+            say(note, "dim")
+        if note := diagnostic_note(models["diagnostics"]):
+            say(note, "dim")
+        say("Exact values and full evidence: --json", "dim")
     else:
         say("More evidence: --details", "dim")
     return "\n".join(line.rstrip() for line in output.getvalue().splitlines())

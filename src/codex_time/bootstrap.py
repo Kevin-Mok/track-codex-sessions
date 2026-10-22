@@ -78,7 +78,7 @@ def main() -> int:
     label = ("" if plain else "⏳ ") + "Preparing tracking history and indexes"
     print(label, file=sys.stderr, flush=True)
     try:
-        with report_progress(label), IndexedStore(args.data_dir, args.state_dir):
+        with report_progress(label, interactive=False), IndexedStore(args.data_dir, args.state_dir):
             pass
         return 0
     except (StoreError, OSError, ValueError) as exc:

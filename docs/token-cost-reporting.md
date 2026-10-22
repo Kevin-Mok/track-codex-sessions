@@ -22,13 +22,13 @@ Input already includes cached reads and cache writes; those subsets are charged 
 
 The UI labels the estimate **Estimated API token cost — Standard**. It excludes tool fees, hosting, taxes, regional processing uplifts and other non-token charges. Incomplete coverage is a **known priced subtotal**. Positive unpriced usage is labelled explicitly instead of appearing free. No observed usage is unavailable; an observed true zero is zero. Recorded work without its own session/directory usage makes coverage incomplete even if another family member has usage.
 
-JSON preserves integer counters and exact Decimal monetary strings. Terminal amounts alone are rounded, so displayed rows can differ by a cent from the displayed aggregate. `--details` adds categories, child contributions, uncertainty, rate provenance and diagnostics. Default output supports narrow terminals, ASCII, NO_COLOR and pipes.
+JSON preserves integer counters and exact Decimal monetary strings. Terminal amounts alone are rounded, so displayed rows can differ by a cent from the displayed aggregate. `--details` adds compact input/cached/output categories, reasoning/cache-write subsets when nonzero, child-agent counts and uncertainty. One short provenance footer gives the cached FX date/age and catalog version; full child identities, diagnostics, exact costs and catalog/FX metadata remain in `--json`. Default and detailed output support narrow terminals, ASCII, NO_COLOR and pipes.
 
 ## Canadian dollars
 
 A single cached [Bank of Canada Valet](https://www.bankofcanada.ca/valet-api-how-to/) `FXUSDCAD` observation converts the entire report. The runtime-only `fx-usd-cad.json` cache records its observation date, last attempt, last success and error status outside the Git-backed data directory.
 
-The daemon owns one asynchronous refresh task. Network reads have a five-second timeout, a bounded outer deadline and response-size limit. Attempts are at least one hour apart; successful checks defer another check for 24 hours. A failure or cancellation preserves the last valid rate, and the report exposes the observation age. With no valid cached rate, USD is shown and CAD is unavailable. Reports only read the cache and never wait for network access. Slow overview/projects reads report elapsed progress on stderr every two seconds; fast reports remain quiet and JSON stdout stays clean.
+The daemon owns one asynchronous refresh task. Network reads have a five-second timeout, a bounded outer deadline and response-size limit. Attempts are at least one hour apart; successful checks defer another check for 24 hours. A failure or cancellation preserves the last valid rate, and the report exposes the observation age. With no valid cached rate, USD is shown and CAD is unavailable. Reports only read the cache and never wait for network access. Slow overview/projects reads update one elapsed-progress line on an interactive stderr every two seconds. Redirected/JSON reports keep periodic newline status on stderr; fast reports remain quiet and JSON stdout stays clean.
 
 ## Migration and rollback
 

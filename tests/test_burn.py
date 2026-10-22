@@ -380,7 +380,9 @@ def test_actual_cli_json_csv_and_table_replay_same_saved_ledger(
     monkeypatch.setattr("sys.argv", [*base, "--plain", "--details", "--color", "always"])
     assert main() == 0
     plain = capsys.readouterr().out
-    assert plain.isascii() and "\x1b" not in plain and "historical_upper_bound" in plain
+    assert plain.isascii() and "\x1b" not in plain
+    assert "historical_upper_bound" not in plain and "Some working time is estimated" in plain
+    assert "historical_upper_bound" in data["rows"][0]["quality"]
     monkeypatch.setattr("sys.argv", [*base, "--json", "--color", "always"])
     assert main() == 0
     exported = capsys.readouterr().out

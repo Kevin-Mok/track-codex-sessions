@@ -99,7 +99,11 @@ def test_day_cli_human_plain_and_details(
     assert (
         run_day(monkeypatch, data_dir, "day", "--date", "2026-10-06", "--details", "--plain") == 0
     )
-    assert "historical_upper_bound" in capsys.readouterr().out
+    details = capsys.readouterr().out
+    assert "Some work is estimated" in details and "--json" in details
+    assert "historical_upper_bound" not in details
+    assert run_day(monkeypatch, data_dir, "day", "--date", "2026-10-06", "--json") == 0
+    assert "historical_upper_bound" in json.loads(capsys.readouterr().out)["quality"]
 
 
 def test_day_cli_timezone_today_and_invalid_date(

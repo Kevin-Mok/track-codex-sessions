@@ -62,19 +62,31 @@ def test_reasoning_details_plain_and_exports_are_preserved() -> None:
     saved, csv_before = deepcopy(data), model_csv(data)
     rendered = model_table(data, details=True)
     assert "Reasoning" in rendered and "high" in rendered and "max" in rendered
-    assert "observation_gap" in rendered and "invalid rollout checkpoint" in rendered
+    assert "observation_gap" not in rendered and "invalid rollout checkpoint" not in rendered
+    assert "Sampling uncertainty: 5s" in rendered and "2.5s" in rendered
+    assert "--json" in rendered
     assert "not additive" in rendered
-    plain = model_table(data, plain=True, color=True)
+    plain = model_table(data, plain=True, color=True, details=True)
     assert plain.isascii() and "\x1b" not in plain
     assert "Model" in plain and "high" in plain
     assert data == saved and model_csv(data) == csv_before
+
+
+def test_details_summarize_repeated_diagnostics_without_growing_with_them() -> None:
+    data = fixture()
+    data["diagnostics"] = [f"private rollout checkpoint {number}" for number in range(50)]
+    rendered = model_table(data, details=True)
+    assert "private rollout checkpoint" not in rendered
+    assert "50" in rendered and "--json" in rendered
+    assert len(rendered.splitlines()) < 30
+    assert "simultaneous sessions count separately" in rendered
 
 
 @pytest.mark.parametrize("width", [20, 32, 48, 69, 70, 88, 120])
 def test_narrow_unicode_rows_preserve_values_without_overflow(width: int) -> None:
     data = fixture(model_only=False)
     data["rows"][0]["model_id"] = "非常長いmodel-" * 5
-    rendered = model_table(data, width=width)
+    rendered = model_table(data, width=width, details=True)
     assert all(cell_len(line) <= width for line in rendered.splitlines())
     folded = "".join(rendered.split())
     assert data["rows"][0]["model_id"] in folded

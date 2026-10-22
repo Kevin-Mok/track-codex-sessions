@@ -228,7 +228,7 @@ def test_single_model_with_distinct_usage_keeps_its_cost_breakdown() -> None:
     assert "1k" in session_row and "0.15" in session_row, text
 
 
-def test_default_defers_identifiers_but_details_preserve_all_evidence() -> None:
+def test_details_keep_identity_and_breakdown_with_full_evidence_in_json() -> None:
     data = two_sessions()
     session = data["directories"][0]["sessions"][0]
     session["children"] = [
@@ -247,23 +247,27 @@ def test_default_defers_identifiers_but_details_preserve_all_evidence() -> None:
         assert row["title"] in default and row["title"] in detailed
     assert "/home/example/coding/atlas" in default
     for evidence in [
-        "input tokens: 1000",
-        "cached input tokens: 0",
-        "cache write input tokens: 0",
-        "output tokens: 0",
-        "reasoning output tokens: 0",
-        "Exact USD: 0.11",
+        "Input: 1k",
+        "Cached: 0",
+        "Output: 0",
+        "Some work is estimated",
+        "1 recording notice",
+        "Child contributions",
+        "test-standard-v1",
+        "--json",
+    ]:
+        assert evidence in detailed, evidence
+    for machine_evidence in [
+        "Exact USD:",
         "session_evidence_flag",
         "directory_evidence_flag",
         "historical_upper_bound",
         "Recorded source evidence needs review.",
         "full-child-session-identifier",
-        "Child contributions",
-        "test-standard-v1",
         "https://example.com/official-model-prices",
         "https://example.com/official-usd-cad",
     ]:
-        assert evidence in detailed, evidence
+        assert machine_evidence not in detailed, machine_evidence
     assert "session_evidence_flag" not in default and "Child contributions" not in default
     assert data == before
 

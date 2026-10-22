@@ -85,7 +85,7 @@ def test_day_directory_session_hierarchy_preserves_visible_values() -> None:
     evidence = day_table(example(), details=True)
     assert "same-prefix-first-session" in evidence and "same-prefix-second-session" in evidence
     assert "historical_upper_bound" not in text and "damaged record" not in text
-    assert "estimated" in text and "concurrent" in text and "--details" in text
+    assert "estimated" in text.lower() and "concurrent" in text.lower() and "--details" in text
 
 
 @pytest.mark.parametrize("width", [20, 48, 88])
@@ -104,15 +104,17 @@ def test_long_unicode_metadata_wraps_without_hiding_paths_ids_or_durations(width
     assert "99.0%" in compact and "1.0%" in compact and "37s" in compact
 
 
-def test_details_show_all_quality_and_diagnostics_without_changing_data() -> None:
+def test_details_summarize_quality_and_diagnostics_without_changing_data() -> None:
     data = example()
     data["directories"][0]["quality"].append("directory_flag")
     data["directories"][0]["sessions"][0]["quality"].append("session_flag")
     before = copy.deepcopy(data)
     text = day_table(data, details=True)
-    assert "historical_upper_bound" in text
-    assert "directory_flag" in text and "session_flag" in text
-    assert "Native read skipped a damaged record." in text
+    assert "Some work is estimated" in text
+    assert "historical_upper_bound" not in text
+    assert "directory_flag" not in text and "session_flag" not in text
+    assert "1 recording notice" in text and "--json" in text
+    assert "Native read skipped a damaged record." not in text
     assert data == before
     assert text == day_table(data, details=True)
 

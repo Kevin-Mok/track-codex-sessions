@@ -190,9 +190,10 @@ def test_details_expose_evidence_without_changing_data() -> None:
     data = overview()
     before = deepcopy(data)
     text = render(data, details=True)
-    assert "Matched model mix" in text and "historical_upper_bound" in text
-    assert "Sampling uncertainty" in text and "fixture diagnostic" in text
-    assert "Rounding sensitivity" in text and "10080" in text
+    assert "Matched model mix" in text and "Some work is estimated" in text
+    assert "Sampling uncertainty" in text and "recording notice" in text
+    assert "Rounding sensitivity" in text and "--json" in text
+    assert "historical_upper_bound" not in text and "fixture diagnostic" not in text
     assert data == before
 
 

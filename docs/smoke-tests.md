@@ -70,7 +70,7 @@ Verify automatic work accounting, daily repo/session reports, model working-time
 
 **Action:** codex-time overview week --date 2026-10-06 --details
 
-**Expected:** The containing week starts Monday October 5. Matched allowance points/duration and exclusions remain distinct from all recorded model work. Multiple reset cohorts stay separate with readable date/reset labels. Details show matched model mixes, uncertainty, raw flags and diagnostics; the default view keeps that evidence behind --details and retains a concise confidence warning.
+**Expected:** The containing week starts Monday October 5. Matched allowance points/duration and exclusions remain distinct from all recorded model work. Multiple reset cohorts stay separate with readable date/reset labels. Details show matched model mixes, uncertainty and concise human caveats. Raw flags, diagnostics, complete pricing/FX metadata and child identities remain in --json. Confidence warnings remain visible without details.
 
 **Action:** COLUMNS=40 codex-time overview day --date 2026-10-06 --plain
 
@@ -108,11 +108,19 @@ Verify automatic work accounting, daily repo/session reports, model working-time
 
 **Action:** uv run codex-time projects --date 2026-10-06 --cwd /absolute/project --archive active --details
 
-**Expected:** Replace /absolute/project with a real project directory. Only original working intervals in that exact cwd contribute, even if a session later resumed elsewhere. Active means unarchived, independent of runtime state. Details show full session IDs, token categories, child contributions, quality flags/diagnostics and pricing/FX provenance; `--session SESSION_ID` narrows to one stable identity. Global `--timezone` belongs before `projects`; its timezone defines the calendar date, including 23/25-hour DST days.
+**Expected:** Replace /absolute/project with a real project directory. Only original working intervals in that exact cwd contribute, even if a session later resumed elsewhere. Active means unarchived, independent of runtime state. Details show each title once per directory, full session IDs, compact input/cached/output categories, nonzero reasoning/cache-write subsets, child-agent counts and one FX/catalog footer. Raw diagnostic/flag lists, exact costs and full pricing dictionaries stay in --json; missing usage remains a concise warning. `--session SESSION_ID` narrows to one stable identity. Global `--timezone` belongs before `projects`; its timezone defines the calendar date, including 23/25-hour DST days.
 
 **Action:** COLUMNS=48 uv run codex-time projects --date 2026-10-06 --plain
 
-**Expected:** Labels and metrics stack at 48 columns; complete paths/titles wrap, directory/session durations and token/cost values remain visible, and output is ASCII without ANSI color. Full IDs remain available with --details. At 120 columns, metrics align and long titles fold without ellipsis. `NO_COLOR=1` and piped automatic output also omit color; `--color always` enables color unless NO_COLOR/plain overrides it. Normal output shows helpful hierarchy and short accuracy notes; raw flags appear only with --details. After ./scripts/setup.sh, the installed `codex-time projects` exposes the same view.
+**Expected:** Labels and metrics stack at 48 columns; complete paths/titles wrap, directory/session durations and token/cost values remain visible, and output is ASCII without ANSI color. Full IDs remain available with --details. At 120 columns, metrics align and long titles fold without ellipsis. `NO_COLOR=1` and piped automatic output also omit color; `--color always` enables color unless NO_COLOR/plain overrides it. Normal and detailed output show helpful hierarchy and short accuracy notes; raw flags stay in JSON. After the documented package refresh, installed `codex-time projects` exposes the same view.
+
+**Action:** codex-time sessions --all-dirs --details && codex-time history --all-dirs --details && codex-time health --details && codex-time status --plain
+
+**Expected:** Sessions show every matching title, time, state and model; details add full IDs/paths. History has readable daily/directory/session totals rather than a JSON dump; without details it shows working sessions and the count of sessions with no work in the selected range. Details/JSON keep that full list. Dates/counts use singular labels for one item, and positive subsecond work remains visible. Health gives observer/heartbeat/notice summaries and optional runtime paths. Status shows the latest 20 entries and an explicit omitted count/JSON hint when needed. Plain output is ASCII. No human view prints raw quality lists or metadata dictionaries; matching --json retains machine fields.
+
+**Action:** Run a slow projects/overview report in a terminal, then repeat with --json redirected to a file.
+
+**Expected:** Interactive human output updates one elapsed-status line and clears it before printing the report. JSON/redirected progress remains periodic newline messages on stderr and JSON stdout parses cleanly. Fast reports print no loading noise. Interrupted or failed reads clear the interactive progress line.
 
 ## Model working-time usage
 
@@ -126,7 +134,7 @@ Verify automatic work accounting, daily repo/session reports, model working-time
 
 **Action:** COLUMNS=40 codex-time model-time day --plain --details
 
-**Expected:** The narrow stacked layout keeps model IDs, reasoning, time, share and sessions readable. Output is ASCII without ANSI escapes; details reveal quality flags, sampling uncertainty with its non-additive caveat and diagnostics. Normal default output hides that raw evidence. NO_COLOR also suppresses color even with --color always. JSON/CSV exports remain clean and retain their exact accounting and quality evidence.
+**Expected:** The narrow stacked layout keeps model IDs, reasoning, time, share and sessions readable. Output is ASCII without ANSI escapes; details reveal sampling uncertainty with its non-additive caveat, human timing notes and a diagnostic count. Raw flags/diagnostics remain in JSON/CSV. NO_COLOR also suppresses color even with --color always. Exports remain clean and retain exact accounting and quality evidence.
 
 **Action:** codex-time model-time week --date 2026-10-06
 
@@ -160,7 +168,7 @@ Verify automatic work accounting, daily repo/session reports, model working-time
 
 **Action:** codex-time allowance day && COLUMNS=48 codex-time allowance day && codex-time allowance day --details
 
-**Expected:** The remaining allowance, burn rate and working duration stay readable. Model IDs and reasoning levels wrap when needed without losing values; labels remain distinguishable without color. `--details` exposes reset metadata, raw quality flags and rounding sensitivity below the readable summary.
+**Expected:** The remaining allowance, burn rate and working duration stay readable. Model IDs and reasoning levels wrap when needed without losing values; labels remain distinguishable without color. `--details` adds readable reset dates, matched windows, uncertainty and rounding sensitivity. Human caveats replace raw flags, epoch timestamps and unbounded diagnostics; JSON/CSV retain full evidence.
 
 **Action:** NO_COLOR=1 codex-time allowance day && codex-time allowance day --color never && codex-time allowance day | cat && codex-time allowance day --plain
 
