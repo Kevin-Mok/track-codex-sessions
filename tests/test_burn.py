@@ -164,6 +164,40 @@ def test_conflicting_snapshot_breaks_attribution() -> None:
     assert "conflicting_quota_observation" in data["quality"]
 
 
+def test_historical_conflicts_do_not_require_quadratic_datetime_comparisons() -> None:
+    class CountedDateTime(datetime):
+        comparisons = 0
+
+        def __lt__(self, other: datetime) -> bool:
+            CountedDateTime.comparisons += 1
+            return super().__lt__(other)
+
+        def __le__(self, other: datetime) -> bool:
+            CountedDateTime.comparisons += 1
+            return super().__le__(other)
+
+    def counted_reading(seconds: int, used: float) -> dict:
+        value = reading(seconds, used)
+        value["at"] = CountedDateTime.fromtimestamp(value["at"].timestamp(), UTC)
+        return value
+
+    readings = [
+        counted_reading(-86_400 + second, used)
+        for second in range(256)
+        for used in (10, 11)
+    ] + [counted_reading(second, second / 4) for second in range(256)]
+    ledger = ledger_with_work()
+    data = run_report(ledger, readings)
+
+    assert all(isinstance(q.at, CountedDateTime) for q in ledger.quota_observations)
+    assert len(data["rows"]) == 1
+    row = data["rows"][0]
+    assert row["matched_points"] == 63.75
+    assert row["working_microseconds"] == 255_000_000
+    assert row["matched_windows"] == 255
+    assert 0 < CountedDateTime.comparisons < 20_000
+
+
 @pytest.mark.parametrize(
     "moment", [datetime(2026, 11, 1, 4, tzinfo=UTC), datetime(2026, 1, 1, 5, tzinfo=UTC)]
 )

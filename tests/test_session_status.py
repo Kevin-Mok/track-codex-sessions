@@ -4,10 +4,11 @@ import importlib
 import importlib.util
 import json
 import os
+import sys
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import cast
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -74,6 +75,79 @@ def test_latest_text_and_lifecycle_ignore_tools_and_commentary(tmp_path: Path) -
     state = sessions(status(home, runtime))[0]
     assert state["status"] == "idle"
     assert state["last_assistant_message"] == "final answer"
+
+
+def test_valid_native_records_use_fast_json_decoder(tmp_path: Path) -> None:
+    home, runtime = tmp_path / "home", tmp_path / "runtime"
+    content = base() + line("event_msg", 2, type="agent_message", message="hello 🌍") + line(
+        "event_msg", 3, type="task_complete", turn_id="t1"
+    )
+    rollout(home, content)
+
+    previous = sys.get_int_max_str_digits()
+    try:
+        sys.set_int_max_str_digits(sys.int_info.default_max_str_digits)
+        with patch.object(json, "loads", side_effect=AssertionError("slow stdlib replay decoder")):
+            result = status(home, runtime)
+    finally:
+        sys.set_int_max_str_digits(previous)
+
+    assert result["fresh"] is True
+    assert sessions(result)[0]["status"] == "idle"
+    assert sessions(result)[0]["last_assistant_message"] == "hello 🌍"
+    assert scan(result)["bytes_read"] == len(content)
+
+
+@pytest.mark.parametrize(
+    "record",
+    [
+        br'{"ignored":"\ud800"}' + b"\n",
+        b'\xef\xbb\xbf{"ignored":0}\n',
+        b'{"ignored":"\xff"}\n',
+        '{"ignored":"x"}'.encode("utf-16") + b"\n",
+        b'{"ignored":' + b"9" * 5000 + b"}\n",
+    ],
+    ids=["surrogate", "bom", "invalid-utf8", "utf16", "oversized-integer"],
+)
+def test_legacy_decoder_fallback_preserves_following_records(tmp_path: Path, record: bytes) -> None:
+    home, runtime = tmp_path / "home", tmp_path / "runtime"
+    content = base() + record + line("event_msg", 2, type="agent_message", message="after") + line(
+        "event_msg", 3, type="task_complete", turn_id="t1"
+    )
+    rollout(home, content)
+
+    with patch.object(json, "loads", wraps=json.loads) as legacy:
+        result = status(home, runtime)
+
+    assert any(call.args == (record,) for call in legacy.call_args_list)
+    assert result["fresh"] is True
+    assert sessions(result)[0]["status"] == "idle"
+    assert sessions(result)[0]["last_assistant_message"] == "after"
+    assert scan(result)["bytes_read"] == len(content)
+
+
+@pytest.mark.parametrize(
+    "limit,digits,accepted",
+    [(640, 1000, False), (4300, 5000, False), (0, 5000, True), (6000, 5000, True)],
+)
+def test_replay_respects_python_integer_limit(
+    tmp_path: Path, limit: int, digits: int, accepted: bool,
+) -> None:
+    home, runtime = tmp_path / "home", tmp_path / "runtime"
+    record = (
+        b'{"type":"event_msg","payload":{"type":"agent_message",'
+        b'"message":"configured","ignored":' + b"9" * digits + b"}}\n"
+    )
+    rollout(home, base() + record)
+    previous = sys.get_int_max_str_digits()
+    try:
+        sys.set_int_max_str_digits(limit)
+        result = status(home, runtime)
+    finally:
+        sys.set_int_max_str_digits(previous)
+
+    assert result["fresh"] is True
+    assert sessions(result)[0]["last_assistant_message"] == ("configured" if accepted else None)
 
 
 def test_hit_never_opens_rollouts_or_rewrites_cache(tmp_path: Path) -> None:
@@ -321,6 +395,47 @@ def test_unavailable_changed_file_keeps_explicit_stale_state(tmp_path: Path) -> 
     assert result["fresh"] is False
     assert sessions(result) == sessions(before)
     assert sessions(status(home, runtime))[0]["status"] == "idle"
+
+
+def test_mid_read_error_preserves_prior_state_and_cache(tmp_path: Path) -> None:
+    home, runtime = tmp_path / "home", tmp_path / "runtime"
+    path = rollout(home, base())
+    before = status(home, runtime)
+    cache = runtime / "session-status.json"
+    cached = cache.read_bytes()
+    with path.open("ab") as out:
+        out.write(line("event_msg", 2, type="task_started", turn_id="t2") + line(
+            "event_msg", 3, type="task_complete", turn_id="t2"
+        ))
+    original_open = Path.open
+
+    def fail_mid_read(path_: Path, *args: object, **kwargs: object) -> object:
+        opened = original_open(path_, *args, **kwargs)  # type: ignore[call-overload]
+        if path_ != path:
+            return opened
+        reads = 0
+
+        def readline(size: int = -1) -> bytes:
+            nonlocal reads
+            reads += 1
+            if reads == 2:
+                raise OSError("synthetic mid-read failure")
+            return cast(bytes, opened.readline(size))
+
+        reader = MagicMock(wraps=opened)
+        reader.__enter__.return_value = reader
+        reader.__exit__.side_effect = opened.__exit__
+        reader.readline.side_effect = readline
+        return reader
+
+    with patch.object(Path, "open", fail_mid_read):
+        result = status(home, runtime)
+    assert result["fresh"] is False
+    assert sessions(result) == sessions(before)
+    assert cache.read_bytes() == cached
+    recovered = status(home, runtime)
+    assert recovered["fresh"] is True
+    assert sessions(recovered)[0]["status"] == "idle"
 
 
 def test_long_scan_reports_ongoing_progress_without_message_contents(tmp_path: Path) -> None:

@@ -6,7 +6,7 @@ import json
 import os
 import shutil
 import sys
-from datetime import date
+from datetime import date, datetime
 from pathlib import Path
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
@@ -19,6 +19,7 @@ from codex_time.model_output import model_csv, model_table
 from codex_time.model_usage import model_report
 from codex_time.overview_cache import cached_overview
 from codex_time.overview_output import overview_table
+from codex_time.overview_read import load_overview
 from codex_time.presentation import build_rows, run_ui
 from codex_time.progress import report_progress
 from codex_time.reporting import daily_report, report
@@ -190,6 +191,10 @@ def main() -> int:
         print(f"{prefix}Unknown timezone: {args.timezone}", file=sys.stderr)
         return 2
     try:
+        # Keep indexed evidence and report periods aligned across calendar boundaries.
+        if command in ("projects", "allowance") and args.period != "all":
+            if args.selected_date is None:
+                args.selected_date = datetime.now(ZoneInfo(args.timezone)).date()
         store = Store(args.data_dir, args.state_dir)
         home = args.codex_home.expanduser().resolve()
         if command == "daemon":
@@ -298,7 +303,12 @@ def main() -> int:
                 interactive=not args.json and sys.stdout.isatty(),
             ):
                 daily_data = daily_report(
-                    store.load(),
+                    load_overview(
+                        store,
+                        period=args.period,
+                        selected_date=args.selected_date,
+                        timezone_name=args.timezone,
+                    ),
                     period=args.period,
                     fx=read_fx(store.runtime),
                     selected_date=args.selected_date,
@@ -356,15 +366,26 @@ def main() -> int:
                     )
                 )
         elif command == "allowance":
-            burn_data = burn_report(
-                store.load(),
-                period=args.period,
-                selected_date=args.selected_date,
-                timezone_name=args.timezone,
-                window_minutes=args.window_minutes,
-                limit_id=args.limit_id,
-                max_gap_seconds=args.max_gap_seconds,
-            )
+            with report_progress(
+                ("" if args.plain else "⏳ ") + "Reading allowance report",
+                interactive=not args.json and sys.stdout.isatty(),
+            ):
+                burn_data = burn_report(
+                    load_overview(
+                        store,
+                        period=args.period,
+                        selected_date=args.selected_date,
+                        timezone_name=args.timezone,
+                        window_minutes=args.window_minutes,
+                        limit_id=args.limit_id,
+                    ),
+                    period=args.period,
+                    selected_date=args.selected_date,
+                    timezone_name=args.timezone,
+                    window_minutes=args.window_minutes,
+                    limit_id=args.limit_id,
+                    max_gap_seconds=args.max_gap_seconds,
+                )
             if args.json:
                 print(json.dumps(burn_data, indent=2))
             elif args.csv:

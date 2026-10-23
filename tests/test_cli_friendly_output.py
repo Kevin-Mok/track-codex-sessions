@@ -82,6 +82,7 @@ def invoke(monkeypatch: pytest.MonkeyPatch, *args: str) -> int:
     ("stdout_tty", "json_output", "expected"),
     [(False, False, False), (True, False, True), (True, True, False)],
 )
+@pytest.mark.parametrize("command", ["projects", "allowance"])
 def test_transient_progress_requires_human_terminal_stdout(
     cli_data,
     monkeypatch,
@@ -89,6 +90,7 @@ def test_transient_progress_requires_human_terminal_stdout(
     stdout_tty,
     json_output,
     expected,
+    command,
 ):
     modes = []
 
@@ -97,10 +99,11 @@ def test_transient_progress_requires_human_terminal_stdout(
         modes.append(interactive)
         yield
 
-    monkeypatch.setattr(cli.Store, "load", lambda self: cli_data, raising=False)
+    monkeypatch.setattr(cli, "load_overview", lambda *args, **kwargs: cli_data)
     monkeypatch.setattr(cli, "report_progress", progress)
     monkeypatch.setattr(sys.stdout, "isatty", lambda: stdout_tty)
-    args = ["projects", "--date", "2026-10-21"] + (["--json"] if json_output else [])
+    args = [command] + (["day"] if command == "allowance" else [])
+    args += ["--date", "2026-10-21"] + (["--json"] if json_output else [])
     assert invoke(monkeypatch, *args) == 0
     capsys.readouterr()
     assert modes == [expected]

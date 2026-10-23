@@ -1,5 +1,6 @@
 """Replay account-wide quota observations against counted root workloads."""
 
+from bisect import bisect_right
 from collections import defaultdict
 from dataclasses import dataclass, field
 from datetime import UTC, date, datetime, timedelta
@@ -180,6 +181,7 @@ def burn_report(
     for (bucket, plan), cohorts in sorted(
         streams.items(), key=lambda item: (item[0][0], item[0][1] or "")
     ):
+        conflict_times = sorted(conflicts[(bucket, plan)])
         for reset, readings in sorted(cohorts.items()):
             by_day: dict[str, Accumulator] = {
                 day: Accumulator(
@@ -189,7 +191,7 @@ def burn_report(
                 for (old_bucket, old_plan, old_reset, day), count in retired_stale.items()
                 if (old_bucket, old_plan, old_reset) == (bucket, plan, reset)
             }
-            for at in conflicts[(bucket, plan)]:
+            for at in conflict_times:
                 if start <= at < end:
                     by_day.setdefault(
                         at.astimezone(zone).date().isoformat(), Accumulator()
@@ -208,10 +210,11 @@ def burn_report(
                     previous = None  # Never bridge ambiguous readings.
                     continue
                 q = values[0]
-                if previous is not None and any(
-                    previous.at < conflict <= at for conflict in conflicts[(bucket, plan)]
-                ):
-                    previous = None  # First unambiguous reading after conflict is a new baseline.
+                if previous is not None:
+                    next_conflict = bisect_right(conflict_times, previous.at)
+                    if next_conflict < len(conflict_times) and conflict_times[next_conflict] <= at:
+                        # First unambiguous reading after conflict is a new baseline.
+                        previous = None
                 if high_water is not None and q.used_percent < high_water:
                     if in_period:
                         by_day.setdefault(day, Accumulator()).stale += 1

@@ -9,6 +9,7 @@ from __future__ import annotations
 import fcntl
 import json
 import os
+import sys
 import time
 from collections.abc import Callable
 from datetime import UTC, datetime
@@ -16,6 +17,7 @@ from pathlib import Path
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_validator
+from pydantic_core import from_json
 
 from codex_time.storage import atomic_json
 
@@ -199,7 +201,16 @@ def _replay(
                 break  # Retry the entire partial line, including split UTF-8, after growth.
             entry.offset = source.tell()
             try:
-                _event(json.loads(raw), entry)
+                if sys.get_int_max_str_digits() != sys.int_info.default_max_str_digits:
+                    # The core decoder has a fixed limit; honor Python's configured limit.
+                    record = json.loads(raw)
+                else:
+                    try:
+                        record = from_json(raw, cache_strings=False)
+                    except ValueError:
+                        # Preserve stdlib-only inputs and its decoding errors.
+                        record = json.loads(raw)
+                _event(record, entry)
             except (ValueError, TypeError, OverflowError):
                 continue  # Invalid complete records cannot hide later lifecycle records.
         entry.dev, entry.ino, entry.size, entry.mtime_ns = _stamp(initial)

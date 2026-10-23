@@ -118,7 +118,7 @@ Verify automatic work accounting, daily repo/session reports, model working-time
 
 **Expected:** Sessions show every matching title, time, state and model; details add full IDs/paths. History has readable daily/directory/session totals rather than a JSON dump; without details it shows working sessions and the count of sessions with no work in the selected range. Details/JSON keep that full list. Dates/counts use singular labels for one item, and positive subsecond work remains visible. Health gives observer/heartbeat/notice summaries and optional runtime paths. Status shows the latest 20 entries and an explicit omitted count/JSON hint when needed. Plain output is ASCII. No human view prints raw quality lists or metadata dictionaries; matching --json retains machine fields.
 
-**Action:** Run a slow projects/overview report in a terminal, then repeat with --json redirected to a file.
+**Action:** Run a slow projects, overview or allowance day report in a terminal, then repeat with --json redirected to a file.
 
 **Expected:** Interactive human output updates one elapsed-status line and clears it before printing the report. JSON/redirected progress remains periodic newline messages on stderr and JSON stdout parses cleanly. Fast reports print no loading noise. Interrupted or failed reads clear the interactive progress line.
 
@@ -250,7 +250,7 @@ Use the source repository root; no sudo is needed. The verifier copies the compl
 
 **Action:** After refreshing the installed package, run `codex-time overview`, then `codex-time overview --plain`, then `codex-time overview --json` from another directory without `uv run` or changing report options. Repeat after ordinary new work or new quota/token evidence; also select another date or timezone.
 
-**Expected:** All modes retain token costs, allowance and model/reasoning totals. Unchanged inputs reuse private runtime accounting; changed evidence/options produce fresh totals. Long computations keep elapsed progress on stderr, and JSON stdout stays parseable. Overview and projects loading messages show `⏳ Reading ... report: Ns elapsed` about every two seconds; `--plain` omits the emoji, while `NO_COLOR` retains it. Fast reports finish silently without loading messages. Live source churn can prevent cache publication and require fresh computation. The existing daemon keeps running; reports never acquire its writer lock or rebuild/migrate its index.
+**Expected:** All modes retain token costs, allowance and model/reasoning totals. Unchanged inputs reuse private runtime accounting; changed evidence/options produce fresh totals. Long computations keep elapsed progress on stderr, and JSON stdout stays parseable. Overview, projects and allowance loading messages show `⏳ Reading ... report: Ns elapsed` about every two seconds; `--plain` omits the emoji, while `NO_COLOR` retains it. Fast reports finish silently without loading messages. Live source churn can prevent cache publication and require fresh computation. The existing daemon keeps running; reports never acquire its writer lock or rebuild/migrate its index.
 
 ## Token usage and estimated API costs
 
@@ -323,3 +323,5 @@ Migration, billing limits, conservative restored-prefix behavior and rollback ar
 **Action:** From the repository root, run `uv run python scripts/verify-parity.py --plain --json`, then `uv run python scripts/verify-session-status.py` on disposable/frozen source copies as described above. No sudo is needed.
 
 **Expected:** Report parity covers the v4-to-v5 migration and five aliases (burn, models, day, list, report). Status is a standalone watcher command with a sessions array; health retains the numeric count. Watcher cold/warm/full replay agrees and unchanged scans read zero raw bytes. Projects preserve token/USD/CAD evidence, while history/sessions/model-time skip evidence journals. Historical six-alias evidence above describes the pre-watcher build.
+
+Report-latency matrix, exact JSON parity, changed-data evidence and source-versus-installed status are recorded in [the latency plan](../plans/optimize-cli-latency.md).
