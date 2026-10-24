@@ -4,7 +4,7 @@ Prepare a verified prompt and launch one fresh executor to diagnose slow tracker
 
 ## Current executor status
 
-Current phase: the direct ORIGINAL61ed3a55→retaineda5 comparison completed actual16818/9fc6ab0 and parentverification7540400. All26cases/47wholeJSONpairs/406returned0/812captures/source80/inputrestoration/2,108priorfiles verified. Independent review confirms substantial gains AND a consistent coldall-overview slowdown(+4.559536s,all5wall+CPUpairs); cause remainsopen. R6/R7unretained/counter0; no plateau/stopping/exhaustion/task-completion claim. Evidence-only documentation milestone is ready; next work is the open regression investigation. Fresh621tests/type/lint/build/279smoke/3publicCLI checks pass. No push/install/live activation.
+Current phase: optimization is PAUSED at the user’s request. The latest measured implementation remains a5d4fa3, with identical app source in c37019b. Full direct benchmark evidence is verified; cold status improved21.078926s and cold all-time overview regressed4.559536s. No newer code improvement is validated. This documentation checkpoint preserves the latest measured state and unexecuted diagnostic notes; no profiling, fixes, push, installation or restart will run while paused. Regression resolution and the stopping criterion remain open.
 Historical checkpoints below describe their recorded phases. The current phase above and final cumulative result supersede earlier live or pending statements.
 
 Round 1 is retained after 26 exact JSON comparisons, 26 fair timing cases and 12 report controls. Its largest observed median gain is 13.281897779 seconds; the consecutive small-round counter is 0.
@@ -1652,3 +1652,21 @@ Final evidence-reviewer pass:11claims verified,0incorrect,1unresolved, with no b
 
 
 Final precommit canonical hash-only refresh: PM9fa4f1017c4bce1f9b7733a09c97b6e2562178e309755a63e28388e0c71cb52c, proof Notes/latency-learning-final-report-hash-evidence-v1.json SHA55e518472043fedd7b76b3a49067952a231c6554297b2eb154d93105ba2e5919. Actualrefresh2796a5/target30e5fe bothstrict0; same11owned/259total, all259semantic/statusrecords and current8updates/foreignrecords preserved. Rootread completeproof before finalstaging. No furtherPM/source/test/configuration change. Milestone subject/body recordsincrementalISOinconclusive, directcoldstatus21.079s faster andcoldalloverview4.560s slower/open.
+
+
+### Cold all-time overview diagnostic continuation
+
+Prior goal turn made authoritative progress: direct fixed26comparison, independentreview and evidence-onlycommitc37019b. Freshstatus6ab810 shows trackedworktreeclean and the same3unrelateduntrackedpaths; no livejob. Existing regression signal is retainedslower in all5wall+CPU pairs acrossbothorders. A fullcoldreport currentlyneedsabout30seconds; until the slowwork is located, the large-input differential run is the initial reproducibleloop. Profiling it is justified to identify a fast deterministic unit seam; profiletime will never count as a CLIgain.
+
+Rankedfalsifiable probes before implementation: (1) extracoldreport/accountingwork—retainedprofile willshow higherwork/callcounts orCPU inloading/burn/token/model construction; (2) addedhumanpresentationwork—coldJSONprofileswillnotshowthegap whilehumanrenderer does; (3) runtime/orderconditions—functionworkcounts remain equivalent and matchedtimingsmove withsource/order, leavingcodecausalityunproved. These are probes, notrootcauses. Do not editproductsourcebefore a definingtest/reproducer and causal evidence.
+
+Canonicallookup3ad0ea (cold all overview cumulative regression CPU profile), with currentPMreadc6a94d, returns retained-budget/startup-cache and completion guidance. Budgetguardscope and bytecodeequivalence apply to a freshprivate diagnostic namespace; neither fixesambientvariation ordiagnosesthisregression. Oldsame-codecontrol differences are nevercorrectionfactors. Useexistingqualifiedhelpers/literalruntime/exclusivelock and preserveallsealednamespaces. Boundfirstprobe toonebaselineandone retainedcoldJSONprofile; addhumanprofiles onlyifneeded. Nextrecordactualartifact/exit/source/inputchecks before interpretingpstats.
+
+
+### Latest measured benchmark — paused checkpoint
+
+The user paused optimization and requested committing the latest benchmark state. Goal status was independently read as paused. Fresh verification2f7ced confirms current appsource40 matches retaineda5 exactly, direct benchmark result0065465fe9f9dc82f1984cf600d9cbf7d18c8fc3ed241ed5f4ea2cf47e07477c is unchanged, and the proposed diagnostic profile namespace does not exist. The preceding diagnostic probes were planned only; no new profile or candidate implementation ran. README gatec3e33a returned0/pass_no_change.
+
+Checkpoint milestone: `docs(perf): checkpoint latest benchmark` (identified by subject; actual hash reported in Codex output). Current change is documentation only; no additional incremental code gain is claimed. Improvement over time remains the directly measured original-to-retained coldstatus62.572261→41.493335s,21.078926s/33.6873percent faster. Cold all-time overview30.202337→34.761873s remains4.559536s slower, with cause unresolved. The complete26case table, spreads, adverse signals and prior verification remain above.
+
+Completed: latest measured code/evidence preserved; source and benchmark identities rechecked; pause recorded. Remaining: regression investigation/fix and valid stopping decision, deferred while paused. Unrelated untracked work is excluded. No new tests are needed for this status-only documentation change; prior621tests, type/lint/build and279smoke checks cover the unchanged app source. No push, installation, restart or history rewrite. Resume optimization only on the user’s instruction.
