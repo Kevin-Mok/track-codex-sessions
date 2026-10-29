@@ -35,3 +35,10 @@ Ship these documentation-only groups oldest first, then push once to `origin/mai
 - Safety: run the canonical shared privacy scanner with this checkout selected before each commit; preserve active hooks. The repo-local scanner entry point is absent.
 - Remaining: milestones 2 and 3, then one upstream push. Canonical incident-learning registration outside this workspace remains pending; historical runtime evidence was not rerun.
 - Rollback: revert the relevant documentation commit; no runtime installation, stored tracking evidence or service configuration is changed.
+
+### Milestone 2 — docs: preserve latency task navigation record
+
+- Completed: milestone 1 committed as `7115db6`; its exact staged privacy gate passed.
+- Reviewed: the October 22 incident distinguishes successful executor launch from terminal navigation, preserves the original executor and makes no claim of application performance completion.
+- Verified: reviewed the complete historical record and its existing prompt/plan references; documentation whitespace validation passes. Historical terminal navigation was not repeated.
+- Remaining: milestone 3 and one push to `origin/main`. External canonical learning registration remains pending and is separate from these public documentation commits.
