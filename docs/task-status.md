@@ -42,3 +42,12 @@ Ship these documentation-only groups oldest first, then push once to `origin/mai
 - Reviewed: the October 22 incident distinguishes successful executor launch from terminal navigation, preserves the original executor and makes no claim of application performance completion.
 - Verified: reviewed the complete historical record and its existing prompt/plan references; documentation whitespace validation passes. Historical terminal navigation was not repeated.
 - Remaining: milestone 3 and one push to `origin/main`. External canonical learning registration remains pending and is separate from these public documentation commits.
+
+### Milestone 3 — docs: add terminal setup and prioritized usage guide
+
+- Completed: historical records shipped in `7115db6` and `9175493`, each after an exact staged privacy-gate pass.
+- Implemented: setup immediately after the README pitch for developers who already have Codex; a linked guide orders overview, projects, session resume and advanced reports by usefulness. Kept existing detailed installation and command references.
+- Verified this turn: setup/check, installed CLI and uv shell-update help all exit 0; README/guide relative file targets exist; complete new documents reviewed; whitespace checks pass. README review accepts the user's explicit setup-first order. No new manual behavior was introduced, so existing smoke checks remain applicable.
+- Delivery: commit this final documentation group after its exact staged privacy pass, then push the complete series once to configured upstream `origin/main` (`Kevin-Mok/track-codex-sessions`). No application code, installation or service configuration changes.
+- Warnings: historical runtime checks and reinstall were deliberately skipped. Canonical incident-learning registration remains outside workspace write permissions; targeted registration check reports the new incident unregistered. Git metadata writes require the scoped approval route.
+- Residual scope: no dirty files are intentionally excluded; recheck status after the final commit and push. External learning registration is the only known follow-up.
