@@ -4,6 +4,8 @@
 
 Codex Time is a local time tracker for developers running Codex across projects, models and reasoning levels. It turns session history into a clear picture of how long Codex worked, which models handled that work, how quickly recorded allowance was consumed, and what recorded tokens would cost at today's Standard API rates in USD and CAD—so it helps developers compare workloads with evidence instead of guesswork.
 
+For day, week and month reports, the overview separates the current allowance-cycle balance from observed usage across every reset cycle in the selected period. The combined total includes points observed across recording gaps or without matched work; cross-day changes stay excluded because their day is uncertain. Missing reset readings can hide consumption, so this is an observed partial total, not an assumption that every reset spent 100 points. Parallel allowance streams are kept separate.
+
 Tracking runs automatically in a separate user service, including quiet thinking and tool execution while subtracting detected blocking waits. A searchable terminal picker lets you find and resume sessions. Built around read-only integration, recoverable accounting and content-free timing and token evidence, the project keeps durable timing data free of conversation bodies. A separate private, disposable status cache stores the latest user and assistant messages for local watchers.
 
 ## Tech Stack And Why Chosen

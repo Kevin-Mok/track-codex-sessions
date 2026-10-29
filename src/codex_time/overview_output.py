@@ -118,6 +118,7 @@ def overview_table(
     )
     latest = allowance["latest"]
     if latest is not None:
+        say("Current cycle balance", "dim")
         remaining, used = latest.get("remaining_percent"), latest.get("used_percent")
         if isinstance(remaining, (int, float)) and isinstance(used, (int, float)):
             say(f"{remaining:g}% remaining   {used:g}% used", "bold")
@@ -194,6 +195,26 @@ def overview_table(
             say()
         streams = {(row["plan_type"], row["bucket"]) for row in allowance["rows"]}
         if len(streams) == 1:
+            points = sum(row["matched_points"] for row in allowance["rows"])
+            unmatched = sum(
+                row["excluded_gap_points"] + row["excluded_no_work_points"]
+                for row in allowance["rows"]
+            )
+            boundary = sum(row["excluded_boundary_points"] for row in allowance["rows"])
+            cycles = len({row["resets_at"] for row in allowance["rows"]})
+            period_label = "for selected day" if models["period"] == "day" else "this period"
+            say(
+                f"Observed usage {period_label}: {points + unmatched:g} pts across "
+                f"{cycles} allowance cycle{'s' if cycles != 1 else ''}",
+                "bold",
+            )
+            say(f"{points:g} pts matched to work; {unmatched:g} pts without matched work", "dim")
+            if boundary:
+                say(
+                    f"Partial total: {boundary:g} pts span day boundaries and are excluded",
+                    "yellow",
+                )
+            say("Observed changes only; usage between reset readings may be missing.", "dim")
             matched = sum(row["working_microseconds"] for row in allowance["rows"])
             say(
                 f"Matched work: {_working_duration(matched)} of "

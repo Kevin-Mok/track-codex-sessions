@@ -79,3 +79,5 @@ Keep local tracker changes grounded in lifecycle and read-only runtime evidence.
 - When inspecting code through the exec bridge, emit the output string separately from result metadata. JSON quoting in a rendered tool object can double visible backslashes; inspect source bytes or AST constant codepoints before proposing an escape correction.
 
 - Verify the final retained source directly against the original across every fixed case. A large cumulative gain does not erase an adverse case: the fresh cold all-time overview was slower in all five wall and CPU pairs across both orders. Preserve that evidence and investigate its cause; per-round success and mixed control signals do not justify a blanket no-regression or plateau claim.
+
+- 2026-10-29: A current-cycle allowance percentage does not represent daily usage across a reset. Present observed points across cycles separately; include unmatched within-day changes, exclude cross-day deltas explicitly, and never infer 100 points spent from a reset alone.

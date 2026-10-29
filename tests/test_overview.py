@@ -315,3 +315,53 @@ def test_total_work_is_prominent_beside_model_rows_after_reset(
     for emphasized in (label, "Matched work: 15m 40s of 22m recorded"):
         style = output.get_style_at_offset(Console(), output.plain.index(emphasized))
         assert style.bold and not style.dim
+
+
+def test_usage_total_spans_resets_without_counting_cross_day_points() -> None:
+    ledger = sample_ledger()
+    ledger.quota_observations = [
+        quota(-86400, 0), quota(0, 66), quota(300, 70),
+        quota(400, 0, 1791846539), quota(600, 1, 1791846539),
+        quota(1300, 2, 1791846539),
+    ]
+    text = render(overview(ledger), plain=True)
+    assert "Current cycle balance" in text
+    assert "Observed usage for selected day: 6 pts across 2 allowance cycles" in text
+    assert "5 pts matched to work; 1 pts without matched work" in text
+    assert "Partial total: 66 pts span day boundaries and are excluded" in text
+    assert "98% remaining   2% used" in text
+
+
+def test_usage_total_includes_observed_points_without_work() -> None:
+    ledger = sample_ledger()
+    ledger.sessions = {}
+    text = render(overview(ledger), plain=True)
+    assert "Observed usage for selected day: 4 pts across 1 allowance cycle" in text
+    assert "0 pts matched to work; 4 pts without matched work" in text
+
+
+def test_usage_total_does_not_combine_parallel_allowance_streams() -> None:
+    ledger = sample_ledger()
+    ledger.quota_observations += [
+        q.model_copy(update={"bucket": "secondary"}) for q in ledger.quota_observations[:]
+    ]
+    text = render(overview(ledger), plain=True)
+    assert "Observed usage for selected day:" not in text
+    assert "Allowance streams can cover the same work" in text
+
+
+@pytest.mark.parametrize("period", ["week", "month"])
+def test_usage_total_labels_selected_period(period: str) -> None:
+    text = render(overview(period=period), plain=True)
+    assert "Observed usage this period: 4 pts across 1 allowance cycle" in text
+
+
+def test_usage_total_can_exceed_one_full_allowance() -> None:
+    ledger = sample_ledger()
+    ledger.quota_observations = [
+        quota(0, 0), quota(300, 98),
+        quota(400, 0, 1791846539), quota(600, 8, 1791846539),
+    ]
+    text = render(overview(ledger), plain=True)
+    assert "Observed usage for selected day: 106 pts across 2 allowance cycles" in text
+    assert "92% remaining   8% used" in text
